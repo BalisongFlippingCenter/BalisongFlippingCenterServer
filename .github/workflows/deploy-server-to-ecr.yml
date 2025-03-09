@@ -11,9 +11,13 @@ on:
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       issues: write
+      
+    enviornment: deployment
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,7 +26,6 @@ jobs:
         run: | 
           echo "AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}"
           echo "AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-          echo "TEST_AWS_ACCESS_KEY: $TEST_AWS_ACCESS_KEY"
 
         # fails here
       - name: Configure AWS credentials
