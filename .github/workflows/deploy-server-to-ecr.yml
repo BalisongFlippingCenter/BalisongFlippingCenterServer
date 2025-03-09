@@ -8,18 +8,17 @@ on:
     branches:
       -master
 
+permissions:
+  contents: read
+
 jobs:
   build_and_push:
+    name: Build and Push
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      issues: write
-
-    enviornment: Deployment
+    environment: Deployment
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: debug secret variables
@@ -36,13 +35,10 @@ jobs:
           aws-region: us-east-1 
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and tag the Docker image
+      - name: Build and tag the Docker image then push to ecr
         run: |
           docker build -t balisongflippingcenter/backend/main .
           docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
-
-      - name: Push the Docker image to ECR
-        run: |
           docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
