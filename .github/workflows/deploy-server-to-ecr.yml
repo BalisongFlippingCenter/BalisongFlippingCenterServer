@@ -15,8 +15,8 @@ jobs:
     permissions:
       contents: read
       issues: write
-      
-    enviornment: deployment
+
+    enviornment: Deployment
 
     steps:
       - name: Checkout code
