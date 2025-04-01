@@ -59,8 +59,7 @@ public class SecurityFilterConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://ec2-44-211-246-248.compute-1.amazonaws.com")); 
-        configuration.setAllowedOrigins(List.of("*")); 
+        configuration.setAllowedOrigins(List.of("http://localhost:3001", "http://ec2-23-22-127-77.compute-1.amazonaws.com"));  
         configuration.setAllowCredentials(true);
         configuration.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type", "Origin", "Accept"));
