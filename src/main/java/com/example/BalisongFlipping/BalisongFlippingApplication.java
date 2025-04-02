@@ -16,6 +16,9 @@ public class BalisongFlippingApplication {
 
 	@Bean
 	CommandLineRunner runner(AccountRepository accountRepository, MongoTemplate mongoTemplate) {
+
+		System.out.println("Allowed Origins: localhost:5157, ec2-23-22-127-77.compute-1.amazonaws.com"); 
+		
 		return args -> {
 			accountRepository.deleteAll();
 		};
