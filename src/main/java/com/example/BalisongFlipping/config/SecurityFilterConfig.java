@@ -69,6 +69,8 @@ public class SecurityFilterConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
+        System.out.println("Allowed Origins: " + configuration.getAllowedOrigins()); 
+
         source.registerCorsConfiguration("/**",configuration);
 
         return source;
