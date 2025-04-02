@@ -20,7 +20,8 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=rootuser
       - MONGO_INITDB_ROOT_PASSWORD=rootpass
   server:
-    image: 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
+    # image: 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
+    build: .
     container_name: server
     ports:
       - 8080:8080
