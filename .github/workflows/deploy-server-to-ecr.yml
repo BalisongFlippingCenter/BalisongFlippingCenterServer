@@ -36,5 +36,5 @@ jobs:
       - name: Build and tag the Docker image then push to ecr
         run: |
           docker build --no-cache -t balisongflippingcenter/backend/main .
-          docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1
-          docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1
+          docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1.1
+          docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1.1
