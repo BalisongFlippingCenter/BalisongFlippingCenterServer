@@ -19,6 +19,12 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=rootuser
       - MONGO_INITDB_ROOT_PASSWORD=rootpass
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   server:
     # image: 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
     build: .
@@ -28,7 +34,7 @@ services:
     # tell docker compose that this service depends on another service and must run afterwards
     depends_on:
       mongodb:
-        condition: service_started
+        condition: service_healthy
     restart: on-failure
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
