@@ -1,6 +1,8 @@
 package com.example.BalisongFlipping.config;
 
+import com.example.BalisongFlipping.modals.tokens.RefreshToken;
 import com.example.BalisongFlipping.services.JwtService;
+import com.example.BalisongFlipping.services.RefreshTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -14,7 +16,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
@@ -25,14 +26,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final HandlerExceptionResolver handlerExceptionResolver;
 
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final UserDetailsService userDetailsService;
 
     public JwtAuthFilter(
             JwtService jwtService,
+            RefreshTokenService refreshTokenService,
             UserDetailsService userDetailsService,
             HandlerExceptionResolver handlerExceptionResolver
     ) {
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
         this.userDetailsService = userDetailsService;
         this.handlerExceptionResolver = handlerExceptionResolver;
     }
@@ -76,8 +80,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
                 else {
-                    // check for refresh token
+                    // check for refresh token if access token is invalid
+                    Cookie[] cookies = request.getCookies();
 
+                    try {
+                        for (Cookie cookie: cookies) {
+                            if (cookie.getName().equals("Refresh-Token-Cookie")) {
+                                if (!refreshTokenService.findByToken(cookie.getValue()).isEmpty()) {
+                                    RefreshToken refreshToken = refreshTokenService.verityExpiration(refreshTokenService.findByToken(cookie.getValue()).get());
+                                    jwtService.generateAccessToken(refreshToken.getOwner()); 
+                                    break;
+                                }
+                            }
+                            else {
+                                return;
+                            }
+                        }
+                    }
+                    catch (Exception e) {
+                        throw e;
+                    }
                 }
             }
 
