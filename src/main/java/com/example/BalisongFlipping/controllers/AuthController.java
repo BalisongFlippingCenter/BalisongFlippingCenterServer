@@ -1,6 +1,8 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.BalisongFlippingApplication;
 import com.example.BalisongFlipping.dtos.*;
+import com.example.BalisongFlipping.implementation.AccountServiceImplementation;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
@@ -8,6 +10,9 @@ import com.example.BalisongFlipping.services.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+
+    Logger log = LoggerFactory.getLogger(BalisongFlippingApplication.class); 
 
     @Autowired
     private CollectionService collectionService;
@@ -94,6 +101,7 @@ public class AuthController {
             // return unauthorized due to no refresh token found
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         } catch (Exception e) {
+            log.error("Exception caught /refresh-access-token GetMapping -> ", e.getMessage());
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         }
     }
@@ -120,7 +128,7 @@ public class AuthController {
             return new ResponseEntity<>("Successfully logged out user.", HttpStatus.OK);
         }
         catch(Exception e) {
-            System.out.println(e.getMessage());
+            log.error("Exception caught /logout PostMapping -> ", e.getMessage());
             return new ResponseEntity<>("Failed to logout", HttpStatus.CONFLICT);
         }
     }
@@ -158,9 +166,10 @@ public class AuthController {
             CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId());
 
             // return account info with access token
-            return new ResponseEntity<>(new LoginResponseDto(accessToken, AccountService.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
+            return new ResponseEntity<>(new LoginResponseDto(accessToken, AccountServiceImplementation.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
         }
         catch(Exception e) {
+            log.error("Exception caught /login PostMapping -> ", e.getMessage());
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
         }
     }
@@ -191,7 +200,7 @@ public class AuthController {
 
                     LoginResponseDto loginResponse = new LoginResponseDto(
                             jwtService.generateAccessToken(verifiedToken.getOwner()),
-                            AccountService.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId())),
+                            AccountServiceImplementation.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId())),
                             collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId())
                     );
 
