@@ -1,6 +1,6 @@
-# BalisongFlippingHub — Server
+# BalisongFlippingCenter — Server
 
-REST API backend for the BalisongFlippingHub community platform — a full-stack web application for balisong knife enthusiasts to share content, connect with other flippers, and showcase their skills.
+REST API backend for the BalisongFlippingCenter community platform — a full-stack web application for balisong knife enthusiasts to share content, connect with other flippers, and showcase their skills.
 
 ![Java](https://img.shields.io/badge/Java-22-orange?style=flat-square&logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen?style=flat-square&logo=springboot)
@@ -12,7 +12,7 @@ REST API backend for the BalisongFlippingHub community platform — a full-stack
 
 ## Overview
 
-BalisongFlippingHubServer is the Spring Boot backend that powers the BalisongFlippingHub platform. It provides a secure REST API with JWT-based authentication, cloud media storage via AWS S3, and is fully containerized for consistent deployment.
+BalisongFlippingCenterServer is the Spring Boot backend that powers the BalisongFlippingCenter platform. It provides a secure REST API with JWT-based authentication, cloud media storage via AWS S3, and is fully containerized for consistent deployment.
 
 **Frontend repo:** [BalisongFlippingHubWeb](https://github.com/BalisongFlippingHub/BalisongFlippingHubWeb)
 
