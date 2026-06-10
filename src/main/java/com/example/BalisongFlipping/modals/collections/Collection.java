@@ -1,37 +1,38 @@
 package com.example.BalisongFlipping.modals.collections;
 
-import com.example.BalisongFlipping.modals.collectionKnives.CollectionKnife;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
-@Document("collections")
+@Entity
+@Table(name = "collections")
 public class Collection {
 
-    public Collection(String userId) {
+    public Collection() {}
+
+    public Collection(Long userId) {
         this.userId = userId;
-        bannerImg = "";
-        collectedKnives = new ArrayList<>();
+        this.bannerImg = "";
     }
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Indexed(unique = true)
-    private String userId;
+    @Column(unique = true)
+    private Long userId;
 
     private String bannerImg;
 
-    private List<String> collectedKnives;
+    private Long featuredKnife;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+
+    public String getBannerImg() { return bannerImg; }
+    public void setBannerImg(String bannerImg) { this.bannerImg = bannerImg; }
+
+    public Long getFeaturedKnife() { return featuredKnife; }
+    public void setFeaturedKnife(Long featuredKnife) { this.featuredKnife = featuredKnife; }
 }

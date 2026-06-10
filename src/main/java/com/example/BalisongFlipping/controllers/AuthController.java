@@ -1,6 +1,8 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.BalisongFlippingApplication;
 import com.example.BalisongFlipping.dtos.*;
+import com.example.BalisongFlipping.implementation.AccountServiceImplementation;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
@@ -8,6 +10,9 @@ import com.example.BalisongFlipping.services.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+
+    Logger log = LoggerFactory.getLogger(BalisongFlippingApplication.class); 
 
     @Autowired
     private CollectionService collectionService;
@@ -41,6 +48,26 @@ public class AuthController {
         return ResponseEntity.ok("token valid");
     }
 
+    @PostMapping("/resend-email-token/{email}")
+    public ResponseEntity<?> resendEmailToken(@PathVariable String email) throws Exception {
+        System.out.println("Email: " + email); 
+        authenticationService.reSendEmailToken(email);
+        return new ResponseEntity<>("Success", HttpStatus.valueOf(200)); 
+    }
+
+    @GetMapping("/verify-email-token/{token}")
+    public ResponseEntity<?> verifyEmailToken(@PathVariable String token) throws Exception {
+
+        log.trace("Accessing verification end point with token: " + token);
+        
+        if (authenticationService.validateEmailVerification(token)) {
+            return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
+        }
+        else {
+            return new ResponseEntity<>("Verification Failed", HttpStatus.UNAUTHORIZED);
+        }
+    }
+
     /**
      *
      * @param registerUserDto
@@ -53,21 +80,27 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterAccountDto registerUserDto) {
-        // validate new user info
-        if (!authenticationService.validateNewUser(registerUserDto)) {
-            return ResponseEntity.badRequest().body("Invalid user info passed.");
+        try {
+            // validate new user info
+            if (!authenticationService.validateNewUser(registerUserDto)) {
+                return ResponseEntity.badRequest().body("Invalid user info passed.");
+            }
+
+            // create new user in db
+            Account registeredUser = authenticationService.signup(registerUserDto);
+
+            // return if email is found to already exist
+            if (registeredUser == null) {
+                return ResponseEntity.badRequest().body("Email already exists.");
+            }
+
+            // successful account creation
+            return ResponseEntity.ok(registeredUser.getId() + " successfully created.");
         }
-
-        // create new user in db
-        Account registeredUser = authenticationService.signup(registerUserDto);
-
-        // return if email is found to already exist
-        if (registeredUser == null) {
-            return ResponseEntity.badRequest().body("Email already exists.");
+        catch (Exception e) {
+            log.info(e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT); 
         }
-
-        // successful account creation
-        return ResponseEntity.ok(registeredUser.getId() + " successfully created.");
     }
 
     @GetMapping("refresh-access-token")
@@ -76,6 +109,8 @@ public class AuthController {
         Cookie[] cookies = request.getCookies();
 
         try {
+            if (cookies == null) return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
+
             // search for refresh token
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equals("Refresh-Token-Cookie")) {
@@ -94,6 +129,7 @@ public class AuthController {
             // return unauthorized due to no refresh token found
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         } catch (Exception e) {
+            log.error("Exception caught /refresh-access-token GetMapping -> ", e.getMessage());
             return new ResponseEntity<>("Unauthorized", HttpStatus.UNAUTHORIZED);
         }
     }
@@ -105,22 +141,29 @@ public class AuthController {
 
         try {
             if (cookies != null) {
-                // search for refresh token
                 for (Cookie cookie : cookies) {
                     if (cookie.getName().equals("Refresh-Token-Cookie")) {
-                        // remove refresh token from repo
-                        refreshTokenService.removeRefreshToken(cookie.getValue());
+                        try {
+                            refreshTokenService.removeRefreshToken(cookie.getValue());
+                        } catch (Exception ignored) {
+                            // token not found or already removed — still expire the cookie
+                        }
+                        break;
                     }
-                    // set empty refresh token
-                    response.addCookie(new Cookie("Refresh-Token-Cookie", ""));
                 }
             }
 
-            // return success
+            // always expire the cookie regardless of whether a token was found
+            Cookie expiredCookie = new Cookie("Refresh-Token-Cookie", "");
+            expiredCookie.setHttpOnly(true);
+            expiredCookie.setPath("/");
+            expiredCookie.setMaxAge(0);
+            response.addCookie(expiredCookie);
+
             return new ResponseEntity<>("Successfully logged out user.", HttpStatus.OK);
         }
         catch(Exception e) {
-            System.out.println(e.getMessage());
+            log.error("Exception caught /logout PostMapping -> ", e.getMessage());
             return new ResponseEntity<>("Failed to logout", HttpStatus.CONFLICT);
         }
     }
@@ -150,17 +193,20 @@ public class AuthController {
             // set refresh token in cookie
             Cookie refreshTokenCookie = new Cookie("Refresh-Token-Cookie", refreshToken.getToken());
             refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setPath("/");
+            refreshTokenCookie.setMaxAge(604800); // 7 days matches refresh token expiry
 
             // add cookie to response body
             response.addCookie(refreshTokenCookie);
 
             // get collection data
-            CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId());
+            CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
 
             // return account info with access token
-            return new ResponseEntity<>(new LoginResponseDto(accessToken, AccountService.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
+            return new ResponseEntity<>(new LoginResponseDto(accessToken, AccountServiceImplementation.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
         }
         catch(Exception e) {
+            log.error("Exception caught /login PostMapping -> ", e.getMessage());
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
         }
     }
@@ -191,8 +237,8 @@ public class AuthController {
 
                     LoginResponseDto loginResponse = new LoginResponseDto(
                             jwtService.generateAccessToken(verifiedToken.getOwner()),
-                            AccountService.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId())),
-                            collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId())
+                            AccountServiceImplementation.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
+                            collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
                     );
 
                     return new ResponseEntity<>(loginResponse, HttpStatus.OK);

@@ -1,17 +1,19 @@
 package com.example.BalisongFlipping.dtos;
 
-import java.util.List;
-
 public record UserDto(
-        // user account info
         String id,
         String email,
+        Boolean emailVerified,
         String displayName,
         String identifierCode,
         String role,
         String collectionId,
         String bannerImg,
         String profileImg,
+        String bio,
+        String measurementUnit,
+        String currency,
+        boolean isHidden,
         String facebookLink,
         String twitterLink,
         String instagramLink,
@@ -20,4 +22,4 @@ public record UserDto(
         String redditLink,
         String personalEmailLink,
         String personalWebsiteLink
-){}
+) {}

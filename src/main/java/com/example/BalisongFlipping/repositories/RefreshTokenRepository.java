@@ -1,17 +1,13 @@
 package com.example.BalisongFlipping.repositories;
 
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
-import org.bson.types.ObjectId;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
-    void deleteByOwner_Id(ObjectId id);
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    default void deleteByOwner_Id(String id) {
-        deleteByOwner_Id(new ObjectId(id));
-    }
+    void deleteByOwner_Id(Long id);
 
     Optional<RefreshToken> findByToken(String token);
 }

@@ -14,7 +14,7 @@ public class CollectionKnifeService {
     private CollectionKnifeRepository collectionKnifeRepository;
 
     public String getCollectionKnifeCoverPhoto(String collectionKnifeId) throws Exception {
-        Optional<CollectionKnife> foundKnife = collectionKnifeRepository.findById(collectionKnifeId);
+        Optional<CollectionKnife> foundKnife = collectionKnifeRepository.findById(Long.parseLong(collectionKnifeId));
 
         if (foundKnife.isPresent()) {
             return foundKnife.get().getCoverPhoto();
@@ -24,7 +24,7 @@ public class CollectionKnifeService {
     }
 
     public String getCollectionKnifeDisplayName(String collectionKnifeId) throws Exception {
-        Optional<CollectionKnife> foundKnife = collectionKnifeRepository.findById(collectionKnifeId);
+        Optional<CollectionKnife> foundKnife = collectionKnifeRepository.findById(Long.parseLong(collectionKnifeId));
 
         if (foundKnife.isPresent()) {
             return foundKnife.get().getDisplayName();

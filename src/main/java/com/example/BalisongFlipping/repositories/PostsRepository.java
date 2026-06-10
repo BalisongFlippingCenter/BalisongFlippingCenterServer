@@ -1,15 +1,14 @@
 package com.example.BalisongFlipping.repositories;
 
 import com.example.BalisongFlipping.modals.posts.PostWrapper;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 
-public interface PostsRepository extends MongoRepository<PostWrapper, String> {
+public interface PostsRepository extends JpaRepository<PostWrapper, Long>, JpaSpecificationExecutor<PostWrapper> {
 
-    @Query(sort = "{ creationDate : -1 }")
-    List<PostWrapper> findAllByAccountId(String accountId);
+    List<PostWrapper> findAllByAccountIdOrderByCreationDateDesc(String accountId);
 
-
+    void deleteAllByAccountId(String accountId);
 }

@@ -6,6 +6,7 @@ import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.RefreshTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -20,6 +21,7 @@ public class RefreshTokenService {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Transactional
     public RefreshToken createRefreshToken(String email) throws Exception {
         // checking for an already existing refresh token assigned to user
         Optional<Account> accountCheck = accountRepository.findAccountByEmail(email);
@@ -35,7 +37,7 @@ public class RefreshTokenService {
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setOwner(accountCheck.get());
         refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiration(Instant.now().plusMillis(6000000));
+        refreshToken.setExpiration(Instant.now().plusMillis(604800000)); // 7 days
 
         // return new refresh token
         return refreshTokenRepository.save(refreshToken);
@@ -54,7 +56,8 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
+    @Transactional
     public void removeRefreshToken(String token) throws Exception {
-       refreshTokenRepository.delete(refreshTokenRepository.findByToken(token).get());
+        refreshTokenRepository.findByToken(token).ifPresent(refreshTokenRepository::delete);
     }
 }
