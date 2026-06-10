@@ -40,3 +40,14 @@ jobs:
           docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
           docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:${{ github.sha }}
           docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 343218221384.dkr.ecr.us-east-1.amazonaws.com
+            docker compose -f /home/ec2-user/docker-compose.yaml pull server
+            docker compose -f /home/ec2-user/docker-compose.yaml up -d server
