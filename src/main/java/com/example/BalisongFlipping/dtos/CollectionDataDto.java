@@ -8,6 +8,7 @@ public record CollectionDataDto(
         String id,
         String accountId,
         String bannerImage,
+        String featuredKnifeId,
         List<CollectionKnife> collectedKnives
 ) {
 }

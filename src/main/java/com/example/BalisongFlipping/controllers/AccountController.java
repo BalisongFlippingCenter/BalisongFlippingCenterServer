@@ -1,231 +1,197 @@
 package com.example.BalisongFlipping.controllers;
-import com.example.BalisongFlipping.dtos.UpdateLinkDTO;
-import com.example.BalisongFlipping.dtos.UserDto;
-import com.example.BalisongFlipping.modals.accounts.Account;
+
+import com.example.BalisongFlipping.dtos.PublicProfileDto;
+import com.example.BalisongFlipping.dtos.UpdatePreferencesDto;
+import com.example.BalisongFlipping.dtos.UpdateSocialLinksDto;
 import com.example.BalisongFlipping.services.AccountService;
-import org.apache.tomcat.util.json.JSONParser;
+import com.example.BalisongFlipping.services.S3Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RequestMapping("/accounts")
 @RestController
 public class AccountController {
 
-   private final AccountService accountService;
+    @Autowired
+    private AccountService accountService;
 
-   public AccountController(AccountService accountService) {
-       this.accountService = accountService;
-   }
+    @Autowired
+    private S3Service s3Service;
 
-   @GetMapping("/me")
-    public ResponseEntity<?> authenticatedUser() throws Exception {
-       Record account = accountService.getSelf();
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
 
-       if (account == null) {
-           return (ResponseEntity<?>) ResponseEntity.notFound();
-       }
-       else {
-           return ResponseEntity.ok(account);
-       }
-   }
+    @Value("${aws.s3.region}")
+    private String s3Region;
 
-   @PostMapping("/me/change-display-name")
-   public ResponseEntity<?> changeUsersDisplayName(@RequestBody String newDisplayName) throws Exception {
-        String accountId =  accountService.getSelf().id();
-        newDisplayName = newDisplayName.substring(0, newDisplayName.length() - 1);
+    private static final Logger log = LoggerFactory.getLogger(AccountController.class);
 
-        if (accountId.isEmpty()) {
-            return new ResponseEntity<>("Failed to get account info", HttpStatus.NOT_FOUND);
-        }
+    // -------------------------------------------------------------------------
+    // Public profile reads — no auth required
+    // -------------------------------------------------------------------------
 
+    @GetMapping("/any/{accountId}")
+    public ResponseEntity<?> getPublicProfileById(@PathVariable("accountId") String accountId) {
         try {
-            return new ResponseEntity<>(accountService.changeDisplayName(accountId, newDisplayName), HttpStatus.OK);
+            return new ResponseEntity<>(accountService.getPublicProfileById(accountId), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /accounts/any/{} -> {}", accountId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        catch (Exception e) {
-            System.out.println(e.getMessage());
-            return new ResponseEntity<>("Failed", HttpStatus.CONFLICT);
+    }
+
+    @GetMapping("/any")
+    public ResponseEntity<?> getPublicProfileByHandle(
+            @RequestParam("displayName") String displayName,
+            @RequestParam("identifierCode") String identifierCode
+    ) {
+        try {
+            return new ResponseEntity<>(accountService.getPublicProfileByHandle(displayName, identifierCode), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /accounts/any?displayName={}&identifierCode={} -> {}", displayName, identifierCode, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-   }
+    }
 
-   @PostMapping(value = "/me/update-profile-img", consumes = "multipart/form-data")
-   public ResponseEntity<String> updateProfileImg(@RequestParam("file") MultipartFile file) throws Exception {
-       String accountId =  accountService.getSelf().id();
+    // -------------------------------------------------------------------------
+    // Self
+    // -------------------------------------------------------------------------
 
-       if (accountService.checkForAccountExistance(accountId)) {
-           return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-       }
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe() {
+        try {
+            return ResponseEntity.ok(accountService.getSelf());
+        } catch (Exception e) {
+            log.error("GET /me -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 
-        String imgId = accountService.updateProfileImg(accountId, file);
+    // -------------------------------------------------------------------------
+    // Profile
+    // -------------------------------------------------------------------------
 
-       if (imgId.isEmpty()) {
-           return new ResponseEntity<>("Failed to store img", HttpStatus.CONFLICT);
-       }
+    @PostMapping("/me/change-display-name")
+    public ResponseEntity<?> changeDisplayName(@RequestBody String newDisplayName) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.changeDisplayName(accountId, newDisplayName.strip()), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/change-display-name -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
 
-       return new ResponseEntity<String>(imgId, HttpStatus.OK);
-   }
+    @PostMapping("/me/update-bio")
+    public ResponseEntity<?> updateBio(@RequestBody String bio) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.updateBio(accountId, bio.strip()), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/update-bio -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping(value = "/me/update-profile-img", consumes = "multipart/form-data")
+    public ResponseEntity<?> updateProfileImg(@RequestParam("file") MultipartFile file) {
+        try {
+            String accountId = accountService.getSelf().id();
+            String key = "profile-images/" + accountId + "/" + file.getOriginalFilename();
+            s3Service.uploadFile(bucketName, key, file.getSize(), file.getContentType(), file.getInputStream());
+            String url = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+            return new ResponseEntity<>(accountService.updateProfileImg(accountId, url), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/update-profile-img -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
 
     @PostMapping(value = "/me/update-banner-img", consumes = "multipart/form-data")
-    public ResponseEntity<String> updateBannerImg(@RequestParam("file") MultipartFile file) throws Exception {
-       try {
-           String accountId =  accountService.getSelf().id();
-
-           if (accountService.checkForAccountExistance(accountId)) {
-               throw new Exception("Can't find account.");
-           }
-
-           return new ResponseEntity<String>(accountService.updateBannerImg(accountId, file), HttpStatus.OK);
-       }
-       catch(Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-       }
-    }
-
-    @PostMapping(value = "/me/update-facebook-link")
-    public ResponseEntity<?> updateFacebookLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
-
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    public ResponseEntity<?> updateBannerImg(@RequestParam("file") MultipartFile file) {
         try {
-            return new ResponseEntity<>(accountService.updateFacebookLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            String key = "banner-images/" + accountId + "/" + file.getOriginalFilename();
+            s3Service.uploadFile(bucketName, key, file.getSize(), file.getContentType(), file.getInputStream());
+            String url = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+            return new ResponseEntity<>(accountService.updateBannerImg(accountId, url), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/update-banner-img -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
-    @PostMapping(value = "/me/update-instagram-link")
-    public ResponseEntity<?> updateInstagramLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
+    // -------------------------------------------------------------------------
+    // Social links (consolidated)
+    // -------------------------------------------------------------------------
 
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    @PostMapping("/me/update-social-links")
+    public ResponseEntity<?> updateSocialLinks(@RequestBody UpdateSocialLinksDto dto) {
         try {
-            return new ResponseEntity<>(accountService.updateInstagramLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.updateSocialLinks(accountId, dto), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/update-social-links -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
-    @PostMapping(value = "/me/update-twitter-link")
-    public ResponseEntity<?> updateTwitterLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
+    // -------------------------------------------------------------------------
+    // App preferences
+    // -------------------------------------------------------------------------
 
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    @PostMapping("/me/update-preferences")
+    public ResponseEntity<?> updatePreferences(@RequestBody UpdatePreferencesDto dto) {
         try {
-            return new ResponseEntity<>(accountService.updateTwitterLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.updatePreferences(accountId, dto), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/update-preferences -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
-    @PostMapping(value = "/me/update-youtube-link")
-    public ResponseEntity<?> updateYoutubeLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
+    // -------------------------------------------------------------------------
+    // Danger zone
+    // -------------------------------------------------------------------------
 
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    @PostMapping("/me/hide-account")
+    public ResponseEntity<?> hideAccount() {
         try {
-            return new ResponseEntity<>(accountService.updateYoutubeLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.hideAccount(accountId), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/hide-account -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
-    @PostMapping(value = "/me/update-reddit-link")
-    public ResponseEntity<?> updateRedditLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
-
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    @PostMapping("/me/reset-account")
+    public ResponseEntity<?> resetAccount() {
         try {
-            return new ResponseEntity<>(accountService.updateRedditLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(accountService.resetAccount(accountId), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /me/reset-account -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
-    @PostMapping(value = "/me/update-discord-link")
-    public ResponseEntity<?> updateDiscordLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
-
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteAccount() {
         try {
-            return new ResponseEntity<>(accountService.updateDiscordLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
+            String accountId = accountService.getSelf().id();
+            accountService.deleteAccount(accountId);
+            return new ResponseEntity<>("Account deleted.", HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("DELETE /me -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
-
-    @PostMapping(value = "/me/update-personal-email-link")
-    public ResponseEntity<?> updatePersonalEmailLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
-
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
-        try {
-            return new ResponseEntity<>(accountService.updatePersonalEmailLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
-    }
-
-    @PostMapping(value = "/me/update-personal-website-link")
-    public ResponseEntity<?> updatePersonalWebsiteLink(@RequestBody UpdateLinkDTO updateLinkDTO) throws Exception {
-        String accountId =  accountService.getSelf().id();
-
-        if (accountService.checkForAccountExistance(accountId)) {
-            return new ResponseEntity<>("User doesn't exist", HttpStatus.NOT_FOUND);
-        }
-
-        try {
-            return new ResponseEntity<>(accountService.updatePersonalWebsiteLink(updateLinkDTO.newLink(), accountId), HttpStatus.OK);
-        }
-        catch(Exception e) {
-            System.out.println(e.getMessage());
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
-    }
-
-   @GetMapping("/me/all")
-    public ResponseEntity<?> allUsers() {
-       System.out.println("Called.");
-       List<Account> accounts = accountService.allUsers();
-
-       return ResponseEntity.ok("Test");
-   }
 }

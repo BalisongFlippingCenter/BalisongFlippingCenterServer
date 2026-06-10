@@ -1,48 +1,47 @@
-# Specify Docker Version
 version: "3.8"
 
-# Specify Each service or Image to run
 services:
-  # Service Identifier
-  mongodb:
-    # Service/Image to Run
-    image: mongo
-    # Service name (Always matches service identifier)
-    container_name: mongodb
-    # port mapping from:to
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
     ports:
-      - 27017:27017
-    # specific volume mapping for service
+      - 5432:5432
     volumes:
-      - data:/data
-    # specified environment variables for image
+      - data:/var/lib/postgresql/data
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=rootuser
-      - MONGO_INITDB_ROOT_PASSWORD=rootpass
+      - POSTGRES_DB=balisong_db
+      - POSTGRES_USER=balisong_user
+      - POSTGRES_PASSWORD=balisong_pass
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "pg_isready -U balisong_user -d balisong_db"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
   server:
     # image: 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
     build: .
     container_name: server
     ports:
       - 8080:8080
-    # tell docker compose that this service depends on another service and must run afterwards
     depends_on:
-      mongodb:
+      postgres:
         condition: service_healthy
     restart: on-failure
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
 
-# Volumes to set up disk space on hardware for each service
 volumes:
   data: {}

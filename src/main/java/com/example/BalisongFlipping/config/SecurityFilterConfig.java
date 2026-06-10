@@ -43,7 +43,7 @@ public class SecurityFilterConfig {
 
         http.authorizeHttpRequests((auth) -> {
             auth
-                    .requestMatchers("/auth/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
+                    .requestMatchers("/auth/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated();

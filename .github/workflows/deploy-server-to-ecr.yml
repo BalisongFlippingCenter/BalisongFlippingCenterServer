@@ -7,7 +7,7 @@ on:
       - master
   pull_request:
     branches:
-      -master
+      - master
 
 # necessary for secrets to be read
 permissions:
@@ -28,13 +28,15 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 
+          aws-region: us-east-1
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and tag the Docker image then push to ecr
+      - name: Build, tag, and push Docker image to ECR
         run: |
           docker build --no-cache -t balisongflippingcenter/backend/main .
-          docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1.1
-          docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:v1.1.1
+          docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:${{ github.sha }}
+          docker tag balisongflippingcenter/backend/main:latest 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
+          docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:${{ github.sha }}
+          docker push 343218221384.dkr.ecr.us-east-1.amazonaws.com/balisongflippingcenter/backend/main:latest
