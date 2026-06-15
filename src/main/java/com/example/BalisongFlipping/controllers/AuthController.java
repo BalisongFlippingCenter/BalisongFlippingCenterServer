@@ -10,6 +10,9 @@ import com.example.BalisongFlipping.services.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,11 +157,13 @@ public class AuthController {
             }
 
             // always expire the cookie regardless of whether a token was found
-            Cookie expiredCookie = new Cookie("Refresh-Token-Cookie", "");
-            expiredCookie.setHttpOnly(true);
-            expiredCookie.setPath("/");
-            expiredCookie.setMaxAge(0);
-            response.addCookie(expiredCookie);
+            ResponseCookie expiredCookie = ResponseCookie.from("Refresh-Token-Cookie", "")
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(Duration.ZERO)
+                    .sameSite("Lax")
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, expiredCookie.toString());
 
             return new ResponseEntity<>("Successfully logged out user.", HttpStatus.OK);
         }
@@ -191,13 +196,13 @@ public class AuthController {
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(loginUserDto.email());
 
             // set refresh token in cookie
-            Cookie refreshTokenCookie = new Cookie("Refresh-Token-Cookie", refreshToken.getToken());
-            refreshTokenCookie.setHttpOnly(true);
-            refreshTokenCookie.setPath("/");
-            refreshTokenCookie.setMaxAge(604800); // 7 days matches refresh token expiry
-
-            // add cookie to response body
-            response.addCookie(refreshTokenCookie);
+            ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(Duration.ofDays(7))
+                    .sameSite("Lax")
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
 
             // get collection data
             CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
