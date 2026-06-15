@@ -15,6 +15,9 @@ public class BuySellPost extends PostWrapper {
     @Column(name = "offering_knife_id")
     private Long offeringKnifeId;
 
+    @Column(name = "price", precision = 10, scale = 2)
+    private Double price;
+
     public BuySellPost() {
         super();
     }
@@ -24,4 +27,7 @@ public class BuySellPost extends PostWrapper {
 
     public Long getOfferingKnifeId() { return offeringKnifeId; }
     public void setOfferingKnifeId(Long offeringKnifeId) { this.offeringKnifeId = offeringKnifeId; }
+
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
 }

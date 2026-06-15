@@ -163,6 +163,7 @@ public class PostService {
             MultipartFile[] mediaFiles,
             String mode,
             String offeringKnifeId,
+            String price,
             String lookingForText,
             String[] tags,
             String difficultyTag,
@@ -175,7 +176,7 @@ public class PostService {
             case "GENERIC":
                 return createGenericPost(accountId, caption, description, referenceKnifeId, mediaFiles, tags);
             case "BUY_SELL":
-                return createBuySellPost(accountId, caption, description, referenceKnifeId, mediaFiles, mode, offeringKnifeId);
+                return createBuySellPost(accountId, caption, description, referenceKnifeId, mediaFiles, mode, offeringKnifeId, price);
             case "TRADE":
                 return createTradePost(accountId, caption, description, referenceKnifeId, mediaFiles, offeringKnifeId, lookingForText);
             case "TRICK_TUTORIAL":
@@ -232,7 +233,8 @@ public class PostService {
             String referenceKnifeId,
             MultipartFile[] mediaFiles,
             String mode,
-            String offeringKnifeId
+            String offeringKnifeId,
+            String price
     ) throws Exception {
         if (caption == null || caption.isBlank()) throw new Exception("caption is required.");
         if (mode == null || mode.isBlank()) throw new Exception("mode is required for buy/sell posts.");
@@ -274,6 +276,9 @@ public class PostService {
         post.setMode(parsedMode);
         if (parsedMode == BuySellMode.SELLING) {
             post.setOfferingKnifeId(Long.parseLong(offeringKnifeId));
+        }
+        if (price != null && !price.isBlank()) {
+            try { post.setPrice(Double.parseDouble(price)); } catch (NumberFormatException ignored) {}
         }
         return postsRepository.save(post);
     }
