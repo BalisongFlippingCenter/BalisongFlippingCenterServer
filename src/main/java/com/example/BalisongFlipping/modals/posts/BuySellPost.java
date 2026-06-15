@@ -2,6 +2,7 @@ package com.example.BalisongFlipping.modals.posts;
 
 import com.example.BalisongFlipping.enums.posts.BuySellMode;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 
 @Entity
 @DiscriminatorValue("BUY_SELL")
@@ -16,7 +17,7 @@ public class BuySellPost extends PostWrapper {
     private Long offeringKnifeId;
 
     @Column(name = "price")
-    private Double price;
+    private BigDecimal price;
 
     public BuySellPost() {
         super();
@@ -28,6 +29,6 @@ public class BuySellPost extends PostWrapper {
     public Long getOfferingKnifeId() { return offeringKnifeId; }
     public void setOfferingKnifeId(Long offeringKnifeId) { this.offeringKnifeId = offeringKnifeId; }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 }

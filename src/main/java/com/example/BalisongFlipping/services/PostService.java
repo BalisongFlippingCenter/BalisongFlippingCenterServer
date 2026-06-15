@@ -27,6 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -278,7 +279,7 @@ public class PostService {
             post.setOfferingKnifeId(Long.parseLong(offeringKnifeId));
         }
         if (price != null && !price.isBlank()) {
-            try { post.setPrice(Double.parseDouble(price)); } catch (NumberFormatException ignored) {}
+            try { post.setPrice(new BigDecimal(price)); } catch (NumberFormatException ignored) {}
         }
         return postsRepository.save(post);
     }
