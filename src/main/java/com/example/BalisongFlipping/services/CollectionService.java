@@ -142,6 +142,10 @@ public class CollectionService {
     // Knife lookup helpers
     // -------------------------------------------------------------------------
 
+    public CollectionKnife getKnifeById(Long knifeId) {
+        return collectionKnifeRepository.findById(knifeId).orElse(null);
+    }
+
     public String getKnifeDisplayName(String collectionId, String knifeId) throws Exception {
         CollectionKnife knife = collectionKnifeRepository.findById(Long.parseLong(knifeId))
                 .orElseThrow(() -> new Exception("Knife not found."));
