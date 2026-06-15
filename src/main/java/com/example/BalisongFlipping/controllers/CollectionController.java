@@ -92,6 +92,18 @@ public class CollectionController {
         }
     }
 
+    @GetMapping("/any/knife/{knifeId}")
+    public ResponseEntity<?> getKnifeById(@PathVariable("knifeId") Long knifeId) {
+        try {
+            CollectionKnife knife = collectionService.getKnifeById(knifeId);
+            if (knife == null) return new ResponseEntity<>("Knife not found.", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(knife, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /collection/any/knife/{} -> {}", knifeId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping(value = "/any/{collectionId}/get-posts")
     public ResponseEntity<?> getCollectionPosts(@PathVariable("collectionId") String collectionId) {
         try {
