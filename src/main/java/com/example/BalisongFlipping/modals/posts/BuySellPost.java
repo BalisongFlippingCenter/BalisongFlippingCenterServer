@@ -15,7 +15,7 @@ public class BuySellPost extends PostWrapper {
     @Column(name = "offering_knife_id")
     private Long offeringKnifeId;
 
-    @Column(name = "price", precision = 10, scale = 2)
+    @Column(name = "price")
     private Double price;
 
     public BuySellPost() {
