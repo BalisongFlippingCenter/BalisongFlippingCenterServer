@@ -2,6 +2,7 @@ package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.postsDtos.CollectionTimelineDto;
 import com.example.BalisongFlipping.dtos.postsDtos.PostAuthorDto;
+import com.example.BalisongFlipping.dtos.postsDtos.PostKnifeDto;
 import com.example.BalisongFlipping.dtos.postsDtos.PostResponseDto;
 import com.example.BalisongFlipping.enums.posts.BuySellMode;
 import com.example.BalisongFlipping.enums.posts.tags.DifficultyTag;
@@ -114,7 +115,28 @@ public class PostService {
                 );
             }
         } catch (Exception ignored) {}
-        return new PostResponseDto(post, author);
+
+        PostKnifeDto offeringKnife = null;
+        Long offeringKnifeId = null;
+        if (post instanceof TradePost tp) {
+            offeringKnifeId = tp.getOfferingKnifeId();
+        } else if (post instanceof BuySellPost bsp) {
+            offeringKnifeId = bsp.getOfferingKnifeId();
+        }
+        if (offeringKnifeId != null) {
+            CollectionKnife knife = collectionKnifeRepository.findById(offeringKnifeId).orElse(null);
+            if (knife != null) {
+                offeringKnife = new PostKnifeDto(
+                        knife.getId(),
+                        knife.getDisplayName(),
+                        knife.getKnifeMaker(),
+                        knife.getBaseKnifeModel(),
+                        knife.getCoverPhoto()
+                );
+            }
+        }
+
+        return new PostResponseDto(post, author, offeringKnife);
     }
 
     private Class<? extends PostWrapper> resolvePostTypeClass(String postType) throws Exception {
