@@ -199,7 +199,6 @@ public class PostService {
             MultipartFile[] mediaFiles,
             String[] tags
     ) throws Exception {
-        if (caption == null || caption.isBlank()) throw new Exception("caption is required.");
         if (mediaFiles == null || mediaFiles.length == 0) throw new Exception("At least one media file is required.");
         if (mediaFiles.length > 10) throw new Exception("Generic posts may not exceed 10 media files.");
 
