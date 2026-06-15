@@ -378,7 +378,6 @@ public class PostService {
             String difficultyTag,
             String[] techniqueTags
     ) throws Exception {
-        if (caption == null || caption.isBlank()) throw new Exception("caption (combo name) is required.");
         if (difficultyTag == null || difficultyTag.isBlank()) throw new Exception("difficultyTag is required for combo posts.");
 
         DifficultyTag parsedDifficulty;
