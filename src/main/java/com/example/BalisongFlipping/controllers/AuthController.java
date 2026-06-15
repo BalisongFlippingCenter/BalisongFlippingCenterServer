@@ -208,7 +208,7 @@ public class AuthController {
             CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
 
             // return account info with access token
-            return new ResponseEntity<>(new LoginResponseDto(accessToken, AccountServiceImplementation.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
+            return new ResponseEntity<>(new LoginResponseDto(accessToken, refreshToken.getToken(), AccountServiceImplementation.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
         }
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> ", e.getMessage());
@@ -217,40 +217,40 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token-login")
-    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request) throws Exception {
+    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request, @RequestBody(required = false) String tokenFromBody) throws Exception {
         try {
-            // get cookies from request
+            String refreshTokenValue = null;
+
+            // try cookie first
             Cookie[] cookies = request.getCookies();
-
-            // check for no cookies
-            if (cookies == null || cookies.length == 0) {
-                throw new Exception("No Refresh Token");
-            }
-
-            // loop to find refresh token
-            for (Cookie cookie: cookies) {
-                if (cookie.getName().equals("Refresh-Token-Cookie")) {
-                    String refreshToken = cookie.getValue();
-
-                    // check for empty refresh token
-                    if (refreshToken.isEmpty()) {
-                        throw new Exception("No Refresh Token after cookies search");
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if (cookie.getName().equals("Refresh-Token-Cookie") && !cookie.getValue().isEmpty()) {
+                        refreshTokenValue = cookie.getValue();
+                        break;
                     }
-
-                    // validate refresh token
-                    RefreshToken verifiedToken = refreshTokenService.verityExpiration(refreshTokenService.findByToken(refreshToken).get());
-
-                    LoginResponseDto loginResponse = new LoginResponseDto(
-                            jwtService.generateAccessToken(verifiedToken.getOwner()),
-                            AccountServiceImplementation.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
-                            collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
-                    );
-
-                    return new ResponseEntity<>(loginResponse, HttpStatus.OK);
                 }
             }
 
-            throw new Exception("Error with authorizing with cookie.");
+            // fall back to body (used when cross-origin cookie can't be sent)
+            if (refreshTokenValue == null && tokenFromBody != null && !tokenFromBody.isBlank()) {
+                refreshTokenValue = tokenFromBody.trim();
+            }
+
+            if (refreshTokenValue == null) {
+                throw new Exception("No Refresh Token");
+            }
+
+            RefreshToken verifiedToken = refreshTokenService.verityExpiration(refreshTokenService.findByToken(refreshTokenValue).get());
+
+            LoginResponseDto loginResponse = new LoginResponseDto(
+                    jwtService.generateAccessToken(verifiedToken.getOwner()),
+                    verifiedToken.getToken(),
+                    AccountServiceImplementation.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
+                    collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
+            );
+
+            return new ResponseEntity<>(loginResponse, HttpStatus.OK);
         }
         catch(Exception e) {
             System.out.println(e.getMessage());
