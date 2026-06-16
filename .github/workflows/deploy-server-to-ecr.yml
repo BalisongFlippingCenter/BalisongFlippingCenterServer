@@ -50,5 +50,6 @@ jobs:
           script: |
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 343218221384.dkr.ecr.us-east-1.amazonaws.com
             cd /home/ec2-user
+            docker image prune -af
             docker-compose pull server
             docker-compose up -d --no-deps --force-recreate server
