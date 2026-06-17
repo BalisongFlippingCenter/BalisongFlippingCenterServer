@@ -137,7 +137,22 @@ public class PostService {
             }
         }
 
-        return new PostResponseDto(post, author, offeringKnife);
+        PostKnifeDto referenceKnife = null;
+        Long referenceKnifeId = post.getReferenceKnifeId();
+        if (referenceKnifeId != null) {
+            CollectionKnife knife = collectionKnifeRepository.findById(referenceKnifeId).orElse(null);
+            if (knife != null) {
+                referenceKnife = new PostKnifeDto(
+                        knife.getId(),
+                        knife.getDisplayName(),
+                        knife.getKnifeMaker(),
+                        knife.getBaseKnifeModel(),
+                        knife.getCoverPhoto()
+                );
+            }
+        }
+
+        return new PostResponseDto(post, author, offeringKnife, referenceKnife);
     }
 
     private Class<? extends PostWrapper> resolvePostTypeClass(String postType) throws Exception {
