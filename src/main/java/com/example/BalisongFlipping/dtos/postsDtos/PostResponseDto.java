@@ -5,5 +5,6 @@ import com.example.BalisongFlipping.modals.posts.PostWrapper;
 public record PostResponseDto(
         PostWrapper post,
         PostAuthorDto author,
-        PostKnifeDto offeringKnife
+        PostKnifeDto offeringKnife,
+        PostKnifeDto referenceKnife
 ) {}
