@@ -222,11 +222,11 @@ public class CollectionKnife {
 
     public void setPinSystem(String pinSystem) {
         switch (pinSystem.toLowerCase().trim()) {
-            case "zenpins": case "zen-pins": case "zen_pins":
+            case "zenpins": case "zen-pins": case "zen_pins": case "zen pins":
                 this.pinSystem = PinSystem.ZEN_PINS; break;
             case "pinsless": case "pinless": case "nopins": case "no pins":
                 this.pinSystem = PinSystem.PINSLESS; break;
-            case "tangpins": case "tang-pins": case "tang_pins":
+            case "tangpins": case "tang-pins": case "tang_pins": case "tang pins":
                 this.pinSystem = PinSystem.TANG_PINS; break;
             case "hiddenzenpins": case "hidden-zen-pins": case "hidden_zen_pins": case "hidden zen pins":
                 this.pinSystem = PinSystem.HIDDEN_ZEN_PINS; break;
@@ -325,9 +325,9 @@ public class CollectionKnife {
                 this.handleMaterial = HandleMaterial.STAINLESS_STEEL; break;
             case "hardened steel": case "hardenedsteel": case "hardened_steel": case "hardened-steel":
                 this.handleMaterial = HandleMaterial.HARDENED_STEEL; break;
-            case "g-10 titanium": case "g/10 titanium": case "g10/titanium": case "g 10 titanium":
+            case "g-10 titanium": case "g/10 titanium": case "g10/titanium": case "g 10 titanium": case "g-10/titanium":
                 this.handleMaterial = HandleMaterial.G_10_TITANIUM; break;
-            case "g-10 aluminium": case "g/10 aluminium": case "g10/aluminium": case "g 10 aluminium":
+            case "g-10 aluminium": case "g/10 aluminium": case "g10/aluminium": case "g 10 aluminium": case "g-10/aluminium":
                 this.handleMaterial = HandleMaterial.G_10_ALUMINIUM; break;
             case "plastic": this.handleMaterial = HandleMaterial.PLASTIC; break;
             default: this.handleMaterial = HandleMaterial.UNKNOWN; break;
@@ -340,8 +340,8 @@ public class CollectionKnife {
             case "plain": this.handleFinish = HandleFinish.PLAIN; break;
             case "stonewash": case "stone wash": case "stone-wash": case "stone_wash":
                 this.handleFinish = HandleFinish.STONE_WASH; break;
-            case "polished": this.handleFinish = HandleFinish.POLISHED; break;
-            case "mirror polished": case "mirrorpolished": case "mirror-polished": case "mirror_polished":
+            case "polished": case "polish": this.handleFinish = HandleFinish.POLISHED; break;
+            case "mirror polished": case "mirror polish": case "mirrorpolished": case "mirror-polished": case "mirror_polished":
                 this.handleFinish = HandleFinish.MIRROR_POLISHED; break;
             case "acidwash": case "acid wash": case "acid-wash": case "acid_wash":
                 this.handleFinish = HandleFinish.ACID_WASHED; break;
