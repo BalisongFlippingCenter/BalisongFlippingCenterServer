@@ -49,6 +49,11 @@ public class User extends Account {
     @Column(name = "post_id")
     private Set<Long> likedPostIds = new HashSet<>();
 
+    @ElementCollection
+    @CollectionTable(name = "account_liked_comments", joinColumns = @JoinColumn(name = "account_id"))
+    @Column(name = "comment_id")
+    private Set<Long> likedCommentIds = new HashSet<>();
+
     private String facebookLink;
     private String twitterLink;
     private String instagramLink;
@@ -111,4 +116,7 @@ public class User extends Account {
 
     public Set<Long> getLikedPostIds() { return likedPostIds; }
     public void setLikedPostIds(Set<Long> likedPostIds) { this.likedPostIds = likedPostIds; }
+
+    public Set<Long> getLikedCommentIds() { return likedCommentIds; }
+    public void setLikedCommentIds(Set<Long> likedCommentIds) { this.likedCommentIds = likedCommentIds; }
 }

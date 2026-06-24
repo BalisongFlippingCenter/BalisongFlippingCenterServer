@@ -24,5 +24,6 @@ public record UserDto(
         String redditLink,
         String personalEmailLink,
         String personalWebsiteLink,
-        Set<Long> likedPostIds
+        Set<Long> likedPostIds,
+        Set<Long> likedCommentIds
 ) {}
