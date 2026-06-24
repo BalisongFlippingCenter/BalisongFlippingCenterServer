@@ -34,6 +34,9 @@ public abstract class PostWrapper {
     @CollectionTable(name = "post_media", joinColumns = @JoinColumn(name = "post_id"))
     private List<PostMedia> mediaFiles;
 
+    @Column(name = "like_count")
+    private int likeCount = 0;
+
     // Returns the discriminator value as a virtual JSON field so the frontend
     // knows which post type it is receiving without a separate postType field.
     @Transient
@@ -62,4 +65,7 @@ public abstract class PostWrapper {
 
     public List<PostMedia> getMediaFiles() { return mediaFiles; }
     public void setMediaFiles(List<PostMedia> mediaFiles) { this.mediaFiles = mediaFiles; }
+
+    public int getLikeCount() { return likeCount; }
+    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
 }

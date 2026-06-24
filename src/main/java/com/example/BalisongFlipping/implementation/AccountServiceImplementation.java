@@ -56,7 +56,8 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
                 user.getDiscordLink(),
                 user.getRedditLink(),
                 user.getPersonalEmailLink(),
-                user.getPersonalWebsiteLink());
+                user.getPersonalWebsiteLink(),
+                user.getLikedPostIds());
     }
 
     // -------------------------------------------------------------------------

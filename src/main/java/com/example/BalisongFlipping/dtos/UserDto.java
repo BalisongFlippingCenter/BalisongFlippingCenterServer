@@ -1,5 +1,7 @@
 package com.example.BalisongFlipping.dtos;
 
+import java.util.Set;
+
 public record UserDto(
         String id,
         String email,
@@ -21,5 +23,6 @@ public record UserDto(
         String discordLink,
         String redditLink,
         String personalEmailLink,
-        String personalWebsiteLink
+        String personalWebsiteLink,
+        Set<Long> likedPostIds
 ) {}

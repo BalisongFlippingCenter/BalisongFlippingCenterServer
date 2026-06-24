@@ -16,7 +16,9 @@ import com.example.BalisongFlipping.modals.posts.*;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CollectionKnifeRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
+import com.example.BalisongFlipping.repositories.PostLikeRepository;
 import com.example.BalisongFlipping.repositories.PostsRepository;
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,6 +49,9 @@ public class PostService {
 
     @Autowired
     private CollectionRepository collectionRepository;
+
+    @Autowired
+    private PostLikeRepository postLikeRepository;
 
     @Autowired
     private S3Service s3Service;
@@ -153,6 +158,50 @@ public class PostService {
         }
 
         return new PostResponseDto(post, author, offeringKnife, referenceKnife);
+    }
+
+    // -------------------------------------------------------------------------
+    // Like / Unlike
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public PostResponseDto likePost(Long postId, String accountId) throws Exception {
+        PostWrapper post = postsRepository.findById(postId)
+                .orElseThrow(() -> new Exception("Post not found."));
+
+        PostLikeId likeId = new PostLikeId(Long.parseLong(accountId), postId);
+        if (postLikeRepository.existsById(likeId)) throw new Exception("Post already liked.");
+
+        postLikeRepository.save(new PostLike(likeId));
+        post.setLikeCount(post.getLikeCount() + 1);
+        postsRepository.save(post);
+
+        User user = (User) accountRepository.findById(Long.parseLong(accountId))
+                .orElseThrow(() -> new Exception("Account not found."));
+        user.getLikedPostIds().add(postId);
+        accountRepository.save(user);
+
+        return buildPostResponse(post);
+    }
+
+    @Transactional
+    public PostResponseDto unlikePost(Long postId, String accountId) throws Exception {
+        PostWrapper post = postsRepository.findById(postId)
+                .orElseThrow(() -> new Exception("Post not found."));
+
+        PostLikeId likeId = new PostLikeId(Long.parseLong(accountId), postId);
+        if (!postLikeRepository.existsById(likeId)) throw new Exception("Post not liked.");
+
+        postLikeRepository.deleteById(likeId);
+        post.setLikeCount(Math.max(0, post.getLikeCount() - 1));
+        postsRepository.save(post);
+
+        User user = (User) accountRepository.findById(Long.parseLong(accountId))
+                .orElseThrow(() -> new Exception("Account not found."));
+        user.getLikedPostIds().remove(postId);
+        accountRepository.save(user);
+
+        return buildPostResponse(post);
     }
 
     private Class<? extends PostWrapper> resolvePostTypeClass(String postType) throws Exception {
