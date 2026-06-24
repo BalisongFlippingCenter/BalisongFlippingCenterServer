@@ -1,6 +1,8 @@
 package com.example.BalisongFlipping.modals.accounts;
 
 import jakarta.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @DiscriminatorValue("USER")
@@ -41,6 +43,11 @@ public class User extends Account {
     private String measurementUnit;
     private String currency;
     private boolean isHidden;
+
+    @ElementCollection
+    @CollectionTable(name = "account_liked_posts", joinColumns = @JoinColumn(name = "account_id"))
+    @Column(name = "post_id")
+    private Set<Long> likedPostIds = new HashSet<>();
 
     private String facebookLink;
     private String twitterLink;
@@ -101,4 +108,7 @@ public class User extends Account {
 
     public String getPersonalWebsiteLink() { return personalWebsiteLink; }
     public void setPersonalWebsiteLink(String personalWebsiteLink) { this.personalWebsiteLink = personalWebsiteLink; }
+
+    public Set<Long> getLikedPostIds() { return likedPostIds; }
+    public void setLikedPostIds(Set<Long> likedPostIds) { this.likedPostIds = likedPostIds; }
 }

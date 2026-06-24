@@ -105,4 +105,30 @@ public class PostController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Like / Unlike — requires auth
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<?> likePost(@PathVariable("id") Long id) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(postService.likePost(id, accountId), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /posts/{}/like -> {}", id, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @DeleteMapping("/{id}/like")
+    public ResponseEntity<?> unlikePost(@PathVariable("id") Long id) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(postService.unlikePost(id, accountId), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("DELETE /posts/{}/like -> {}", id, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
 }
