@@ -5,10 +5,12 @@ import com.example.BalisongFlipping.dtos.commentDtos.CommentResponseDto;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.comments.Comment;
 import com.example.BalisongFlipping.modals.comments.CommentLike;
+import com.example.BalisongFlipping.modals.posts.PostWrapper;
 import com.example.BalisongFlipping.modals.comments.CommentLikeId;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CommentLikeRepository;
 import com.example.BalisongFlipping.repositories.CommentRepository;
+import com.example.BalisongFlipping.repositories.PostsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +27,7 @@ public class CommentService {
     @Autowired private CommentRepository commentRepository;
     @Autowired private CommentLikeRepository commentLikeRepository;
     @Autowired private AccountRepository accountRepository;
+    @Autowired private PostsRepository postsRepository;
 
     // -------------------------------------------------------------------------
     // Public reads
@@ -53,6 +56,9 @@ public class CommentService {
         if (content == null || content.isBlank())
             throw new Exception("Comment content cannot be empty.");
 
+        PostWrapper post = postsRepository.findById(postId)
+                .orElseThrow(() -> new Exception("Post not found."));
+
         if (parentCommentId != null) {
             Comment parent = commentRepository.findById(parentCommentId)
                     .orElseThrow(() -> new Exception("Parent comment not found."));
@@ -61,6 +67,9 @@ public class CommentService {
             parent.setReplyCount(parent.getReplyCount() + 1);
             commentRepository.save(parent);
         }
+
+        post.setCommentCount(post.getCommentCount() + 1);
+        postsRepository.save(post);
 
         Comment comment = new Comment(postId, Long.parseLong(accountId), content, parentCommentId);
         return buildCommentResponse(commentRepository.save(comment));
@@ -90,15 +99,22 @@ public class CommentService {
         if (!comment.getAccountId().equals(Long.parseLong(accountId)))
             throw new Exception("You can only delete your own comments.");
 
-        // Decrement parent reply count if this is a reply
+        PostWrapper post = postsRepository.findById(comment.getPostId())
+                .orElseThrow(() -> new Exception("Post not found."));
+
         if (comment.getParentCommentId() != null) {
+            // This is a reply — decrement parent's reply count
             commentRepository.findById(comment.getParentCommentId()).ifPresent(parent -> {
                 parent.setReplyCount(Math.max(0, parent.getReplyCount() - 1));
                 commentRepository.save(parent);
             });
+            post.setCommentCount(Math.max(0, post.getCommentCount() - 1));
+        } else {
+            // Top-level comment — subtract itself plus all its replies (cascade-deleted by DB)
+            post.setCommentCount(Math.max(0, post.getCommentCount() - 1 - comment.getReplyCount()));
         }
 
-        // Cascade to replies is handled by the DB ON DELETE CASCADE constraint
+        postsRepository.save(post);
         commentRepository.deleteById(commentId);
     }
 
