@@ -84,10 +84,14 @@ public class PostService {
         return buildPostResponse(post);
     }
 
-    public Page<PostResponseDto> getPosts(String postType, String accountId, int page, int size) throws Exception {
+    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, int page, int size) throws Exception {
         // Resolve before the lambda — checked exceptions can't be thrown from inside Specification.toPredicate
         final Class<? extends PostWrapper> typeClass = (postType != null && !postType.isBlank())
                 ? resolvePostTypeClass(postType)
+                : null;
+
+        final DifficultyTag parsedDifficulty = (difficultyTag != null && !difficultyTag.isBlank())
+                ? DifficultyTag.valueOf(difficultyTag.toUpperCase().trim())
                 : null;
 
         Specification<PostWrapper> spec = (root, query, cb) -> {
@@ -99,6 +103,15 @@ public class PostService {
 
             if (typeClass != null) {
                 predicates.add(cb.equal(root.type(), typeClass));
+            }
+
+            if (parsedDifficulty != null) {
+                // difficultyTag exists on ComboPost and TrickTutorialPost — use TREAT to reach the field
+                Predicate comboMatch = cb.equal(
+                        cb.treat(root, ComboPost.class).get("difficultyTag"), parsedDifficulty);
+                Predicate tutorialMatch = cb.equal(
+                        cb.treat(root, TrickTutorialPost.class).get("difficultyTag"), parsedDifficulty);
+                predicates.add(cb.or(comboMatch, tutorialMatch));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
