@@ -45,11 +45,12 @@ public class PostController {
             @RequestParam(value = "postType", required = false) String postType,
             @RequestParam(value = "accountId", required = false) String accountId,
             @RequestParam(value = "difficultyTag", required = false) String difficultyTag,
+            @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         try {
-            Page<PostResponseDto> result = postService.getPosts(postType, accountId, difficultyTag, page, size);
+            Page<PostResponseDto> result = postService.getPosts(postType, accountId, difficultyTag, search, page, size);
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             log.error("GET /posts/any -> {}", e.getMessage());

@@ -84,7 +84,7 @@ public class PostService {
         return buildPostResponse(post);
     }
 
-    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, int page, int size) throws Exception {
+    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, String search, int page, int size) throws Exception {
         // Resolve before the lambda — checked exceptions can't be thrown from inside Specification.toPredicate
         final Class<? extends PostWrapper> typeClass = (postType != null && !postType.isBlank())
                 ? resolvePostTypeClass(postType)
@@ -92,6 +92,10 @@ public class PostService {
 
         final DifficultyTag parsedDifficulty = (difficultyTag != null && !difficultyTag.isBlank())
                 ? DifficultyTag.valueOf(difficultyTag.toUpperCase().trim())
+                : null;
+
+        final String searchTerm = (search != null && !search.isBlank())
+                ? "%" + search.trim().toLowerCase() + "%"
                 : null;
 
         Specification<PostWrapper> spec = (root, query, cb) -> {
@@ -103,15 +107,26 @@ public class PostService {
 
             if (typeClass != null) {
                 predicates.add(cb.equal(root.type(), typeClass));
+            } else if (searchTerm != null) {
+                // Search is only meaningful on COMBO and TRICK_TUTORIAL — restrict automatically
+                predicates.add(cb.or(
+                        cb.equal(root.type(), ComboPost.class),
+                        cb.equal(root.type(), TrickTutorialPost.class)
+                ));
             }
 
             if (parsedDifficulty != null) {
-                // difficultyTag exists on ComboPost and TrickTutorialPost — use TREAT to reach the field
                 Predicate comboMatch = cb.equal(
                         cb.treat(root, ComboPost.class).get("difficultyTag"), parsedDifficulty);
                 Predicate tutorialMatch = cb.equal(
                         cb.treat(root, TrickTutorialPost.class).get("difficultyTag"), parsedDifficulty);
                 predicates.add(cb.or(comboMatch, tutorialMatch));
+            }
+
+            if (searchTerm != null) {
+                Predicate captionMatch = cb.like(cb.lower(root.get("caption")), searchTerm);
+                Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), searchTerm);
+                predicates.add(cb.or(captionMatch, descriptionMatch));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
