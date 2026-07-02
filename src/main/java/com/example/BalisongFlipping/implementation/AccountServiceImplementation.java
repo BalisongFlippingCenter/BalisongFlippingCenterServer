@@ -7,6 +7,8 @@ import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.utils.ProfanityFilter;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
+import com.example.BalisongFlipping.modals.follows.Follow;
+import com.example.BalisongFlipping.modals.follows.FollowId;
 import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.*;
 import com.example.BalisongFlipping.services.EmailService;
@@ -39,6 +41,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Autowired private CommentLikeRepository commentLikeRepository;
     @Autowired private EmailService emailService;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private FollowRepository followRepository;
 
     // -------------------------------------------------------------------------
     // DTO conversion
@@ -71,7 +74,10 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
                 user.getPersonalEmailLink(),
                 user.getPersonalWebsiteLink(),
                 user.getLikedPostIds(),
-                user.getLikedCommentIds());
+                user.getLikedCommentIds(),
+                user.getFollowerCount(),
+                user.getFollowingCount(),
+                user.getPostCount());
     }
 
     // -------------------------------------------------------------------------
@@ -172,7 +178,10 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
                 user.getDiscordLink(),
                 user.getRedditLink(),
                 user.getPersonalEmailLink(),
-                user.getPersonalWebsiteLink()
+                user.getPersonalWebsiteLink(),
+                user.getFollowerCount(),
+                user.getFollowingCount(),
+                user.getPostCount()
         );
     }
 
@@ -285,6 +294,75 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         user.setDisplayName(displayName);
         user.setIdentifierCode(generateIdentifierCode(displayName));
         return convertAccountToDto(accountRepository.save(user));
+    }
+
+    // -------------------------------------------------------------------------
+    // Follow / unfollow
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public UserDto followAccount(String followerId, String targetId) throws Exception {
+        if (followerId.equals(targetId))
+            throw new Exception("You cannot follow yourself.");
+
+        Long followerLong = Long.parseLong(followerId);
+        Long targetLong   = Long.parseLong(targetId);
+
+        FollowId followId = new FollowId(followerLong, targetLong);
+        if (followRepository.existsById(followId))
+            throw new Exception("Already following this account.");
+
+        followRepository.save(new Follow(followId));
+
+        User follower = getUser(followerId);
+        follower.setFollowingCount(follower.getFollowingCount() + 1);
+        accountRepository.save(follower);
+
+        User target = getUser(targetId);
+        target.setFollowerCount(target.getFollowerCount() + 1);
+        accountRepository.save(target);
+
+        return convertAccountToDto(follower);
+    }
+
+    @Override
+    @Transactional
+    public UserDto unfollowAccount(String followerId, String targetId) throws Exception {
+        Long followerLong = Long.parseLong(followerId);
+        Long targetLong   = Long.parseLong(targetId);
+
+        FollowId followId = new FollowId(followerLong, targetLong);
+        if (!followRepository.existsById(followId))
+            throw new Exception("Not following this account.");
+
+        followRepository.deleteById(followId);
+
+        User follower = getUser(followerId);
+        follower.setFollowingCount(Math.max(0, follower.getFollowingCount() - 1));
+        accountRepository.save(follower);
+
+        User target = getUser(targetId);
+        target.setFollowerCount(Math.max(0, target.getFollowerCount() - 1));
+        accountRepository.save(target);
+
+        return convertAccountToDto(follower);
+    }
+
+    @Override
+    @Transactional
+    public void incrementPostCount(String accountId) throws Exception {
+        User user = getUser(accountId);
+        user.setPostCount(user.getPostCount() + 1);
+        accountRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void decrementPostCount(String accountId) throws Exception {
+        User user = getUser(accountId);
+        user.setPostCount(Math.max(0, user.getPostCount() - 1));
+        accountRepository.save(user);
     }
 
     // -------------------------------------------------------------------------

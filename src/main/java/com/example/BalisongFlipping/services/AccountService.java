@@ -41,6 +41,14 @@ public interface AccountService {
     // google auth
     UserDto setInitialDisplayName(String accountId, String displayName) throws Exception;
 
+    // follow / unfollow
+    UserDto followAccount(String followerId, String targetId) throws Exception;
+    UserDto unfollowAccount(String followerId, String targetId) throws Exception;
+
+    // post count maintenance
+    void incrementPostCount(String accountId) throws Exception;
+    void decrementPostCount(String accountId) throws Exception;
+
     // email / password change (2-step via email code)
     void requestEmailChange(String accountId) throws Exception;
     UserDto confirmEmailChange(String accountId, ConfirmEmailChangeDto dto) throws Exception;
