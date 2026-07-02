@@ -54,6 +54,9 @@ public class PostService {
     private PostLikeRepository postLikeRepository;
 
     @Autowired
+    private AccountService accountService;
+
+    @Autowired
     private S3Service s3Service;
 
     @Value("${cloud.aws.s3.bucket}")
@@ -267,20 +270,23 @@ public class PostService {
         if (postType == null || postType.isBlank()) {
             throw new Exception("postType is required.");
         }
+        PostWrapper created;
         switch (postType.toUpperCase().trim()) {
             case "GENERIC":
-                return createGenericPost(accountId, caption, description, referenceKnifeId, mediaFiles, tags);
+                created = createGenericPost(accountId, caption, description, referenceKnifeId, mediaFiles, tags); break;
             case "BUY_SELL":
-                return createBuySellPost(accountId, caption, description, referenceKnifeId, mediaFiles, mode, offeringKnifeId, price);
+                created = createBuySellPost(accountId, caption, description, referenceKnifeId, mediaFiles, mode, offeringKnifeId, price); break;
             case "TRADE":
-                return createTradePost(accountId, caption, description, referenceKnifeId, mediaFiles, offeringKnifeId, lookingForText);
+                created = createTradePost(accountId, caption, description, referenceKnifeId, mediaFiles, offeringKnifeId, lookingForText); break;
             case "TRICK_TUTORIAL":
-                return createTrickTutorialPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags);
+                created = createTrickTutorialPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags); break;
             case "COMBO":
-                return createComboPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags);
+                created = createComboPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags); break;
             default:
                 throw new Exception("Unknown postType: " + postType);
         }
+        accountService.incrementPostCount(accountId);
+        return created;
     }
 
     // -------------------------------------------------------------------------

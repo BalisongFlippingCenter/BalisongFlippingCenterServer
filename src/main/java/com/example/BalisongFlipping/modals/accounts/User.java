@@ -54,6 +54,10 @@ public class User extends Account {
     @Column(name = "comment_id")
     private Set<Long> likedCommentIds = new HashSet<>();
 
+    private int followerCount  = 0;
+    private int followingCount = 0;
+    private int postCount      = 0;
+
     private String facebookLink;
     private String twitterLink;
     private String instagramLink;
@@ -89,6 +93,15 @@ public class User extends Account {
 
     public boolean isHidden() { return isHidden; }
     public void setHidden(boolean isHidden) { this.isHidden = isHidden; }
+
+    public int getFollowerCount() { return followerCount; }
+    public void setFollowerCount(int followerCount) { this.followerCount = followerCount; }
+
+    public int getFollowingCount() { return followingCount; }
+    public void setFollowingCount(int followingCount) { this.followingCount = followingCount; }
+
+    public int getPostCount() { return postCount; }
+    public void setPostCount(int postCount) { this.postCount = postCount; }
 
     public String getFacebookLink() { return facebookLink; }
     public void setFacebookLink(String facebookLink) { this.facebookLink = facebookLink; }

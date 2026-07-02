@@ -160,6 +160,32 @@ public class AccountController {
     }
 
     // -------------------------------------------------------------------------
+    // Follow / unfollow
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/any/{targetId}/follow")
+    public ResponseEntity<?> followAccount(@PathVariable("targetId") String targetId) {
+        try {
+            String followerId = accountService.getSelf().id();
+            return ResponseEntity.ok(accountService.followAccount(followerId, targetId));
+        } catch (Exception e) {
+            log.error("POST /accounts/any/{}/follow -> {}", targetId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @DeleteMapping("/any/{targetId}/follow")
+    public ResponseEntity<?> unfollowAccount(@PathVariable("targetId") String targetId) {
+        try {
+            String followerId = accountService.getSelf().id();
+            return ResponseEntity.ok(accountService.unfollowAccount(followerId, targetId));
+        } catch (Exception e) {
+            log.error("DELETE /accounts/any/{}/follow -> {}", targetId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Email / password change (2-step via email code)
     // -------------------------------------------------------------------------
 

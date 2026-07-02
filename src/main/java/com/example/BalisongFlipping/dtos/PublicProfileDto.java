@@ -16,5 +16,8 @@ public record PublicProfileDto(
         String discordLink,
         String redditLink,
         String personalEmailLink,
-        String personalWebsiteLink
+        String personalWebsiteLink,
+        int followerCount,
+        int followingCount,
+        int postCount
 ) {}
