@@ -139,14 +139,16 @@ public class PostService {
     private PostResponseDto buildPostResponse(PostWrapper post) {
         PostAuthorDto author = null;
         try {
-            Account account = accountRepository.findById(Long.parseLong(post.getAccountId())).orElse(null);
-            if (account instanceof User user) {
-                author = new PostAuthorDto(
-                        post.getAccountId(),
-                        user.getDisplayName(),
-                        user.getIdentifierCode(),
-                        user.getProfileImg()
-                );
+            if (post.getAccountId() != null) {
+                Account account = accountRepository.findById(Long.parseLong(post.getAccountId())).orElse(null);
+                if (account instanceof User user) {
+                    author = new PostAuthorDto(
+                            post.getAccountId(),
+                            user.getDisplayName(),
+                            user.getIdentifierCode(),
+                            user.getProfileImg()
+                    );
+                }
             }
         } catch (Exception ignored) {}
 

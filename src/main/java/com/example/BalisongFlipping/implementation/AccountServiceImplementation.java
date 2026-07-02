@@ -6,6 +6,9 @@ import com.example.BalisongFlipping.utils.ProfanityFilter;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.repositories.*;
+import com.example.BalisongFlipping.repositories.CommentRepository;
+import com.example.BalisongFlipping.repositories.PostLikeRepository;
+import com.example.BalisongFlipping.repositories.CommentLikeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +29,9 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Autowired private PostsRepository postsRepository;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
     @Autowired private EmailTokenRepository emailTokenRepository;
+    @Autowired private CommentRepository commentRepository;
+    @Autowired private PostLikeRepository postLikeRepository;
+    @Autowired private CommentLikeRepository commentLikeRepository;
 
     // -------------------------------------------------------------------------
     // DTO conversion
@@ -328,16 +334,21 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         refreshTokenRepository.deleteByOwner_Id(userId);
         emailTokenRepository.deleteByOwner_Id(userId);
 
-        // remove collection knives then collection
+        // remove collection knives then collection (personal property — not kept)
         collectionRepository.findByUserId(userId).ifPresent(collection -> {
             collectionKnifeRepository.deleteAllByCollectionId(collection.getId());
             collectionRepository.delete(collection);
         });
 
-        // remove posts
-        postsRepository.deleteAllByAccountId(accountId);
+        // anonymize posts and comments — content stays, author becomes null
+        postsRepository.anonymizeByAccountId(accountId);
+        commentRepository.anonymizeByAccountId(userId);
 
-        // remove account
+        // remove like records for this account (counts on posts/comments are intentionally left as-is)
+        postLikeRepository.deleteAllById_AccountId(userId);
+        commentLikeRepository.deleteAllById_AccountId(userId);
+
+        // remove account (cascade-deletes account_liked_posts and account_liked_comments)
         accountRepository.deleteById(userId);
     }
 

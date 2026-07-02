@@ -165,17 +165,17 @@ public class CommentService {
     // -------------------------------------------------------------------------
 
     private CommentResponseDto buildCommentResponse(Comment comment) {
-        User author = accountRepository.findById(comment.getAccountId())
-                .map(a -> (User) a)
-                .orElseThrow(() -> new RuntimeException("Comment author not found."));
-
-        CommentAuthorDto authorDto = new CommentAuthorDto(
-                author.getId().toString(),
-                author.getDisplayName(),
-                author.getIdentifierCode(),
-                author.getProfileImg()
-        );
-
+        CommentAuthorDto authorDto = null;
+        if (comment.getAccountId() != null) {
+            authorDto = accountRepository.findById(comment.getAccountId())
+                    .map(a -> (User) a)
+                    .map(u -> new CommentAuthorDto(
+                            u.getId().toString(),
+                            u.getDisplayName(),
+                            u.getIdentifierCode(),
+                            u.getProfileImg()))
+                    .orElse(null);
+        }
         return new CommentResponseDto(comment, authorDto);
     }
 }
