@@ -1,5 +1,7 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.dtos.ConfirmEmailChangeDto;
+import com.example.BalisongFlipping.dtos.ConfirmPasswordChangeDto;
 import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.dtos.UpdatePreferencesDto;
 import com.example.BalisongFlipping.dtos.UpdateSocialLinksDto;
@@ -153,6 +155,57 @@ public class AccountController {
             return new ResponseEntity<>(accountService.updatePreferences(accountId, dto), HttpStatus.OK);
         } catch (Exception e) {
             log.error("POST /me/update-preferences -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Email / password change (2-step via email code)
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/me/request-email-change")
+    public ResponseEntity<?> requestEmailChange() {
+        try {
+            String accountId = accountService.getSelf().id();
+            accountService.requestEmailChange(accountId);
+            return ResponseEntity.ok("Verification code sent to your current email.");
+        } catch (Exception e) {
+            log.error("POST /me/request-email-change -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/me/confirm-email-change")
+    public ResponseEntity<?> confirmEmailChange(@RequestBody ConfirmEmailChangeDto dto) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return ResponseEntity.ok(accountService.confirmEmailChange(accountId, dto));
+        } catch (Exception e) {
+            log.error("POST /me/confirm-email-change -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/me/request-password-change")
+    public ResponseEntity<?> requestPasswordChange() {
+        try {
+            String accountId = accountService.getSelf().id();
+            accountService.requestPasswordChange(accountId);
+            return ResponseEntity.ok("Verification code sent to your email.");
+        } catch (Exception e) {
+            log.error("POST /me/request-password-change -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/me/confirm-password-change")
+    public ResponseEntity<?> confirmPasswordChange(@RequestBody ConfirmPasswordChangeDto dto) {
+        try {
+            String accountId = accountService.getSelf().id();
+            accountService.confirmPasswordChange(accountId, dto);
+            return ResponseEntity.ok("Password updated successfully.");
+        } catch (Exception e) {
+            log.error("POST /me/confirm-password-change -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }

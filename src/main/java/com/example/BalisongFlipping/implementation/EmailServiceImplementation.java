@@ -29,12 +29,11 @@ public class EmailServiceImplementation implements EmailService {
 
     @Override
     public void sendEmail(String to, String subject, String text) {
-        // TODO: configure Gmail App Password in .env to re-enable
-        // SimpleMailMessage message = new SimpleMailMessage();
-        // message.setTo(to);
-        // message.setSubject(subject);
-        // message.setText(text);
-        // mailSender.send(message);
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        mailSender.send(message);
     }
 
     @Override
