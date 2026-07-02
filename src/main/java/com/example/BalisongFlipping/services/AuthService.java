@@ -1,5 +1,6 @@
 package com.example.BalisongFlipping.services;
 
+import com.example.BalisongFlipping.dtos.ConfirmForgotPasswordDto;
 import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
@@ -15,4 +16,7 @@ public interface AuthService {
     void reSendEmailToken(String email) throws Exception;
 
     GoogleSignInResult googleSignIn(String googleAccessToken) throws Exception;
+
+    void forgotPassword(String email) throws Exception;
+    void confirmForgotPassword(ConfirmForgotPasswordDto dto) throws Exception;
 }

@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.BalisongFlipping.dtos.ConfirmForgotPasswordDto;
 import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
@@ -26,6 +27,8 @@ import com.example.BalisongFlipping.modals.collections.Collection;
 import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
+import com.example.BalisongFlipping.repositories.EmailTokenRepository;
+import org.springframework.transaction.annotation.Transactional;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.AuthService;
 import com.example.BalisongFlipping.services.EmailService;
@@ -41,6 +44,9 @@ public class AuthServiceImplementation implements AuthService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private EmailTokenRepository emailTokenRepository;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -238,6 +244,46 @@ public class AuthServiceImplementation implements AuthService {
         saved.setCollectionId(collection.getId());
 
         return new GoogleSignInResult(accountRepository.save(saved), true);
+    }
+
+    @Override
+    public void forgotPassword(String email) throws Exception {
+        Optional<Account> account = accountRepository.findAccountByEmail(email);
+        if (account.isEmpty()) return; // don't leak whether the email exists
+
+        emailTokenRepository.deleteByOwner_Id(account.get().getId());
+
+        EmailVerificationToken token = new EmailVerificationToken(account.get());
+        emailTokenRepository.save(token);
+
+        emailService.sendEmail(
+                email,
+                "Balisong Flipping Hub — Password Reset Code",
+                "Your password reset code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+        );
+    }
+
+    @Override
+    @Transactional
+    public void confirmForgotPassword(ConfirmForgotPasswordDto dto) throws Exception {
+        if (dto.newPassword() == null || dto.newPassword().length() < 7)
+            throw new Exception("Password must be at least 7 characters.");
+
+        Account account = accountRepository.findAccountByEmail(dto.email())
+                .orElseThrow(() -> new Exception("Invalid code."));
+
+        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
+                .orElseThrow(() -> new Exception("Invalid code."));
+
+        if (!token.getOwner().getId().equals(account.getId()))
+            throw new Exception("Invalid code.");
+
+        if (token.getExpiration().isBefore(java.time.Instant.now()))
+            throw new Exception("Code has expired. Please request a new one.");
+
+        emailTokenRepository.delete(token);
+        account.setPassword(passwordEncoder.encode(dto.newPassword()));
+        accountRepository.save(account);
     }
 
     private String buildTempDisplayName(String googleName) {

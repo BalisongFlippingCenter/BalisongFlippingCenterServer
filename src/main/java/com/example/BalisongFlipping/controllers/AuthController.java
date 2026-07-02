@@ -2,6 +2,8 @@ package com.example.BalisongFlipping.controllers;
 
 import com.example.BalisongFlipping.BalisongFlippingApplication;
 import com.example.BalisongFlipping.dtos.*;
+import com.example.BalisongFlipping.dtos.ConfirmForgotPasswordDto;
+import com.example.BalisongFlipping.dtos.ForgotPasswordDto;
 import com.example.BalisongFlipping.implementation.AccountServiceImplementation;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
@@ -250,6 +252,28 @@ public class AuthController {
             return new ResponseEntity<>("Invalid Google access token.", HttpStatus.UNAUTHORIZED);
         } catch (Exception e) {
             log.error("POST /auth/google -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDto dto) {
+        try {
+            authenticationService.forgotPassword(dto.email());
+            return ResponseEntity.ok("If an account exists with that email, a reset code has been sent.");
+        } catch (Exception e) {
+            log.error("POST /auth/forgot-password -> {}", e.getMessage());
+            return ResponseEntity.ok("If an account exists with that email, a reset code has been sent.");
+        }
+    }
+
+    @PostMapping("/confirm-forgot-password")
+    public ResponseEntity<?> confirmForgotPassword(@RequestBody ConfirmForgotPasswordDto dto) {
+        try {
+            authenticationService.confirmForgotPassword(dto);
+            return ResponseEntity.ok("Password updated successfully.");
+        } catch (Exception e) {
+            log.error("POST /auth/confirm-forgot-password -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
