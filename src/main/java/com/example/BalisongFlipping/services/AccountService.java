@@ -1,5 +1,7 @@
 package com.example.BalisongFlipping.services;
 
+import com.example.BalisongFlipping.dtos.ConfirmEmailChangeDto;
+import com.example.BalisongFlipping.dtos.ConfirmPasswordChangeDto;
 import com.example.BalisongFlipping.dtos.DisplayNameChangeDto;
 import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.dtos.UpdatePreferencesDto;
@@ -38,6 +40,12 @@ public interface AccountService {
 
     // google auth
     UserDto setInitialDisplayName(String accountId, String displayName) throws Exception;
+
+    // email / password change (2-step via email code)
+    void requestEmailChange(String accountId) throws Exception;
+    UserDto confirmEmailChange(String accountId, ConfirmEmailChangeDto dto) throws Exception;
+    void requestPasswordChange(String accountId) throws Exception;
+    void confirmPasswordChange(String accountId, ConfirmPasswordChangeDto dto) throws Exception;
 
     // danger zone
     UserDto hideAccount(String accountId) throws Exception;

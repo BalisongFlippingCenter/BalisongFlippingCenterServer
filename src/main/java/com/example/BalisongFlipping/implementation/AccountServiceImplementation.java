@@ -1,11 +1,16 @@
 package com.example.BalisongFlipping.implementation;
 
 import com.example.BalisongFlipping.dtos.*;
+import com.example.BalisongFlipping.dtos.ConfirmEmailChangeDto;
+import com.example.BalisongFlipping.dtos.ConfirmPasswordChangeDto;
 import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.utils.ProfanityFilter;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
+import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.*;
+import com.example.BalisongFlipping.services.EmailService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.example.BalisongFlipping.repositories.CommentRepository;
 import com.example.BalisongFlipping.repositories.PostLikeRepository;
 import com.example.BalisongFlipping.repositories.CommentLikeRepository;
@@ -32,6 +37,8 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Autowired private CommentRepository commentRepository;
     @Autowired private PostLikeRepository postLikeRepository;
     @Autowired private CommentLikeRepository commentLikeRepository;
+    @Autowired private EmailService emailService;
+    @Autowired private BCryptPasswordEncoder passwordEncoder;
 
     // -------------------------------------------------------------------------
     // DTO conversion
@@ -278,6 +285,87 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         user.setDisplayName(displayName);
         user.setIdentifierCode(generateIdentifierCode(displayName));
         return convertAccountToDto(accountRepository.save(user));
+    }
+
+    // -------------------------------------------------------------------------
+    // Email / password change (2-step via email code)
+    // -------------------------------------------------------------------------
+
+    @Override
+    public void requestEmailChange(String accountId) throws Exception {
+        User user = getUser(accountId);
+        emailTokenRepository.deleteByOwner_Id(user.getId());
+
+        EmailVerificationToken token = new EmailVerificationToken(user);
+        emailTokenRepository.save(token);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Balisong Flipping Hub — Email Change Code",
+                "Your verification code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+        );
+    }
+
+    @Override
+    @Transactional
+    public UserDto confirmEmailChange(String accountId, ConfirmEmailChangeDto dto) throws Exception {
+        if (dto.newEmail() == null || !dto.newEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
+            throw new Exception("New email is not valid.");
+
+        if (accountRepository.findAccountByEmail(dto.newEmail()).isPresent())
+            throw new Exception("Email is already in use.");
+
+        User user = getUser(accountId);
+
+        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
+                .orElseThrow(() -> new Exception("Invalid code."));
+
+        if (!token.getOwner().getId().equals(user.getId()))
+            throw new Exception("Invalid code.");
+
+        if (token.getExpiration().isBefore(java.time.Instant.now()))
+            throw new Exception("Code has expired. Please request a new one.");
+
+        emailTokenRepository.delete(token);
+        user.setEmail(dto.newEmail());
+        return convertAccountToDto(accountRepository.save(user));
+    }
+
+    @Override
+    public void requestPasswordChange(String accountId) throws Exception {
+        User user = getUser(accountId);
+        emailTokenRepository.deleteByOwner_Id(user.getId());
+
+        EmailVerificationToken token = new EmailVerificationToken(user);
+        emailTokenRepository.save(token);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Balisong Flipping Hub — Password Change Code",
+                "Your verification code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+        );
+    }
+
+    @Override
+    @Transactional
+    public void confirmPasswordChange(String accountId, ConfirmPasswordChangeDto dto) throws Exception {
+        if (dto.newPassword() == null || dto.newPassword().length() < 7)
+            throw new Exception("Password must be at least 7 characters.");
+
+        User user = getUser(accountId);
+
+        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
+                .orElseThrow(() -> new Exception("Invalid code."));
+
+        if (!token.getOwner().getId().equals(user.getId()))
+            throw new Exception("Invalid code.");
+
+        if (token.getExpiration().isBefore(java.time.Instant.now()))
+            throw new Exception("Code has expired. Please request a new one.");
+
+        emailTokenRepository.delete(token);
+        user.setPassword(passwordEncoder.encode(dto.newPassword()));
+        accountRepository.save(user);
     }
 
     // -------------------------------------------------------------------------
