@@ -36,6 +36,9 @@ public interface AccountService {
     // app preferences
     UserDto updatePreferences(String accountId, UpdatePreferencesDto dto) throws Exception;
 
+    // google auth
+    UserDto setInitialDisplayName(String accountId, String displayName) throws Exception;
+
     // danger zone
     UserDto hideAccount(String accountId) throws Exception;
     UserDto resetAccount(String accountId) throws Exception;

@@ -2,6 +2,7 @@ package com.example.BalisongFlipping.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -43,6 +44,8 @@ public class SecurityFilterConfig {
 
         http.authorizeHttpRequests((auth) -> {
             auth
+                    // display-name setup requires auth even though it lives under /auth/
+                    .requestMatchers(HttpMethod.PATCH, "/auth/display-name").authenticated()
                     .requestMatchers("/auth/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/stats", "/stats/**","/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
                     .permitAll()
                     .anyRequest()

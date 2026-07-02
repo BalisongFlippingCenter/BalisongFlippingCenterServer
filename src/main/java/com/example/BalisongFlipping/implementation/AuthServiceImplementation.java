@@ -1,13 +1,22 @@
 package com.example.BalisongFlipping.implementation;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
 import com.example.BalisongFlipping.utils.ProfanityFilter;
@@ -32,6 +41,9 @@ public class AuthServiceImplementation implements AuthService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     // object for password encoder
     private final PasswordEncoder passwordEncoder;
@@ -180,5 +192,61 @@ public class AuthServiceImplementation implements AuthService {
 
         return accountRepository.findAccountByEmail(loginInfo.email())
                 .orElseThrow();
+    }
+
+    @Override
+    public GoogleSignInResult googleSignIn(String googleAccessToken) throws Exception {
+        // Fetch user info from Google
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(googleAccessToken);
+        ResponseEntity<Map> response = restTemplate.exchange(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Map.class
+        );
+
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            throw new Exception("Invalid Google access token.");
+        }
+
+        Map<String, Object> userInfo = response.getBody();
+        String email = (String) userInfo.get("email");
+        if (email == null) throw new Exception("Google account has no email address.");
+
+        String givenName = (String) userInfo.get("given_name");
+        String fullName  = (String) userInfo.get("name");
+
+        // Existing user — log in
+        Optional<Account> existing = accountRepository.findAccountByEmail(email);
+        if (existing.isPresent()) {
+            return new GoogleSignInResult(existing.get(), false);
+        }
+
+        // New user — create account with a temporary display name
+        String tempDisplayName = buildTempDisplayName(givenName != null ? givenName : fullName);
+        User newUser = new User(
+                email,
+                passwordEncoder.encode(UUID.randomUUID().toString()),
+                tempDisplayName,
+                accountService.generateIdentifierCode(tempDisplayName)
+        );
+        newUser.setEmailVerified(true);
+        User saved = accountRepository.save(newUser);
+
+        Collection collection = collectionRepository.save(new Collection(saved.getId()));
+        saved.setCollectionId(collection.getId());
+
+        return new GoogleSignInResult(accountRepository.save(saved), true);
+    }
+
+    private String buildTempDisplayName(String googleName) {
+        if (googleName != null && !googleName.isBlank()) {
+            String sanitized = googleName.replaceAll("[^a-zA-Z0-9_!.]", "");
+            if (sanitized.length() >= 4) {
+                return sanitized.length() > 20 ? sanitized.substring(0, 20) : sanitized;
+            }
+        }
+        return "user" + (100000 + new Random().nextInt(900000));
     }
 }

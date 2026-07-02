@@ -1,5 +1,6 @@
 package com.example.BalisongFlipping.services;
 
+import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
 import com.example.BalisongFlipping.modals.accounts.Account;
@@ -10,6 +11,8 @@ public interface AuthService {
 
     Account signup(RegisterAccountDto newUser) throws Exception;
     Account authenticate(LoginAccountDto loginInfo);
-    Boolean validateEmailVerification(String emailToken) throws Exception; 
+    Boolean validateEmailVerification(String emailToken) throws Exception;
     void reSendEmailToken(String email) throws Exception;
+
+    GoogleSignInResult googleSignIn(String googleAccessToken) throws Exception;
 }

@@ -7,6 +7,7 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
 import com.example.BalisongFlipping.services.*;
+import org.springframework.web.client.HttpClientErrorException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -213,6 +214,55 @@ public class AuthController {
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> ", e.getMessage());
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleSignIn(@RequestBody GoogleAuthDto dto, HttpServletResponse response) {
+        try {
+            GoogleSignInResult result = authenticationService.googleSignIn(dto.googleAccessToken());
+            Account account = result.account();
+            User user = (User) account;
+
+            String accessToken = jwtService.generateAccessToken(account);
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(account.getEmail());
+
+            ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(Duration.ofDays(7))
+                    .sameSite("Lax")
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+            CollectionDataDto collectionData = collectionService.getCollection(
+                    user.getCollectionId() != null ? user.getCollectionId().toString() : null);
+
+            return new ResponseEntity<>(new GoogleLoginResponseDto(
+                    accessToken,
+                    refreshToken.getToken(),
+                    AccountServiceImplementation.convertAccountToDto(account),
+                    collectionData,
+                    result.isNewUser()
+            ), HttpStatus.OK);
+        } catch (HttpClientErrorException e) {
+            log.error("POST /auth/google -> Google rejected token: {}", e.getMessage());
+            return new ResponseEntity<>("Invalid Google access token.", HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            log.error("POST /auth/google -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PatchMapping("/display-name")
+    public ResponseEntity<?> setDisplayName(@RequestBody SetDisplayNameDto dto) {
+        try {
+            String accountId = accountService.getSelf().id();
+            UserDto updated = accountService.setInitialDisplayName(accountId, dto.displayName());
+            return new ResponseEntity<>(updated, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("PATCH /auth/display-name -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
