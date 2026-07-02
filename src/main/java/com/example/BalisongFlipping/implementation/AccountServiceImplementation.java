@@ -258,6 +258,23 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     }
 
     // -------------------------------------------------------------------------
+    // Google auth
+    // -------------------------------------------------------------------------
+
+    @Override
+    public UserDto setInitialDisplayName(String accountId, String displayName) throws Exception {
+        if (displayName == null || displayName.isBlank())
+            throw new Exception("Display name cannot be empty.");
+        if (!validateDisplayName(displayName))
+            throw new Exception("Display name must be at least 4 characters and contain only letters, numbers, _, !, or .");
+
+        User user = getUser(accountId);
+        user.setDisplayName(displayName);
+        user.setIdentifierCode(generateIdentifierCode(displayName));
+        return convertAccountToDto(accountRepository.save(user));
+    }
+
+    // -------------------------------------------------------------------------
     // Danger zone
     // -------------------------------------------------------------------------
 
