@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
+import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.EmailTokenRepository;
-import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.EmailService;
 
 import org.springframework.mail.SimpleMailMessage;
@@ -25,7 +25,7 @@ public class EmailServiceImplementation implements EmailService {
     private EmailTokenRepository emailTokenRepository;
 
     @Autowired
-    private AccountService accountService;
+    private AccountRepository accountRepository;
 
     @Override
     public void sendEmail(String to, String subject, String text) {
@@ -38,7 +38,8 @@ public class EmailServiceImplementation implements EmailService {
 
     @Override
     public EmailVerificationToken createNewEmailVerificationToken(String userEmail) throws Exception {
-        Account foundAccount = accountService.getAccountByEmail(userEmail);
+        Account foundAccount = accountRepository.findAccountByEmail(userEmail)
+                .orElseThrow(() -> new Exception("Account not found."));
         EmailVerificationToken t = new EmailVerificationToken();
         t.setOwner(foundAccount);
         t.setExpiration(Instant.now().plusMillis(600000));
@@ -48,7 +49,8 @@ public class EmailServiceImplementation implements EmailService {
 
     @Override
     public EmailVerificationToken createReplacementEmailVerificationToken(String email) throws Exception {
-        Account foundAccount = accountService.getAccountByEmail(email);
+        Account foundAccount = accountRepository.findAccountByEmail(email)
+                .orElseThrow(() -> new Exception("Account not found."));
         emailTokenRepository.deleteByOwner_Id(foundAccount.getId());
 
         EmailVerificationToken t = new EmailVerificationToken();
@@ -65,7 +67,9 @@ public class EmailServiceImplementation implements EmailService {
         if (foundToken.isPresent()) {
             if (foundToken.get().getToken().equals(emailToken) &&
                     validatedEmailTokenExpiration(foundToken.get().getExpiration())) {
-                accountService.verifyAccountEmail(foundToken.get().getOwner());
+                Account owner = foundToken.get().getOwner();
+                owner.setEmailVerified(true);
+                accountRepository.save(owner);
                 return true;
             }
             return false;
