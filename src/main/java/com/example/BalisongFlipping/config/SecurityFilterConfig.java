@@ -46,6 +46,9 @@ public class SecurityFilterConfig {
             auth
                     // display-name setup requires auth even though it lives under /auth/
                     .requestMatchers(HttpMethod.PATCH, "/auth/display-name").authenticated()
+                    // admin-only endpoints
+                    .requestMatchers(HttpMethod.GET, "/reports").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PATCH, "/reports/*/status").hasRole("ADMIN")
                     .requestMatchers("/auth/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/stats", "/stats/**","/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
                     .permitAll()
                     .anyRequest()
