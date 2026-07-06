@@ -1,6 +1,8 @@
 package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.postsDtos.CollectionTimelineDto;
+import com.example.BalisongFlipping.enums.notifications.NotificationType;
+import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.dtos.postsDtos.PostAuthorDto;
 import com.example.BalisongFlipping.dtos.postsDtos.PostKnifeDto;
 import com.example.BalisongFlipping.dtos.postsDtos.PostResponseDto;
@@ -55,6 +57,9 @@ public class PostService {
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private S3Service s3Service;
@@ -213,6 +218,11 @@ public class PostService {
                 .orElseThrow(() -> new Exception("Account not found."));
         user.getLikedPostIds().add(postId);
         accountRepository.save(user);
+
+        if (post.getAccountId() != null) {
+            notificationService.send(Long.parseLong(post.getAccountId()), Long.parseLong(accountId),
+                    NotificationType.POST_LIKED, TargetType.POST, postId);
+        }
 
         return buildPostResponse(post);
     }

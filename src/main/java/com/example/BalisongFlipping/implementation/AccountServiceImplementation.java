@@ -7,8 +7,11 @@ import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.utils.ProfanityFilter;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
+import com.example.BalisongFlipping.enums.notifications.NotificationType;
+import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.modals.follows.Follow;
 import com.example.BalisongFlipping.modals.follows.FollowId;
+import com.example.BalisongFlipping.services.NotificationService;
 import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.*;
 import com.example.BalisongFlipping.services.EmailService;
@@ -42,6 +45,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Autowired private EmailService emailService;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private FollowRepository followRepository;
+    @Autowired private NotificationService notificationService;
 
     // -------------------------------------------------------------------------
     // DTO conversion
@@ -322,6 +326,8 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         User target = getUser(targetId);
         target.setFollowerCount(target.getFollowerCount() + 1);
         accountRepository.save(target);
+
+        notificationService.send(targetLong, followerLong, NotificationType.NEW_FOLLOWER, TargetType.PROFILE, followerLong);
 
         return convertAccountToDto(follower);
     }

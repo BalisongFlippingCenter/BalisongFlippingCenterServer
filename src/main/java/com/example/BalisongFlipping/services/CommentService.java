@@ -2,6 +2,8 @@ package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.commentDtos.CommentAuthorDto;
 import com.example.BalisongFlipping.dtos.commentDtos.CommentResponseDto;
+import com.example.BalisongFlipping.enums.notifications.NotificationType;
+import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.comments.Comment;
 import com.example.BalisongFlipping.modals.comments.CommentLike;
@@ -28,6 +30,7 @@ public class CommentService {
     @Autowired private CommentLikeRepository commentLikeRepository;
     @Autowired private AccountRepository accountRepository;
     @Autowired private PostsRepository postsRepository;
+    @Autowired private NotificationService notificationService;
 
     // -------------------------------------------------------------------------
     // Public reads
@@ -72,7 +75,27 @@ public class CommentService {
         postsRepository.save(post);
 
         Comment comment = new Comment(postId, Long.parseLong(accountId), content, parentCommentId);
-        return buildCommentResponse(commentRepository.save(comment));
+        Comment saved = commentRepository.save(comment);
+
+        Long actorId = Long.parseLong(accountId);
+
+        if (parentCommentId != null) {
+            // Reply — notify the parent comment's author
+            commentRepository.findById(parentCommentId).ifPresent(parent -> {
+                if (parent.getAccountId() != null) {
+                    notificationService.send(parent.getAccountId(), actorId,
+                            NotificationType.COMMENT_REPLIED, TargetType.POST, postId);
+                }
+            });
+        } else {
+            // Top-level comment — notify the post author
+            if (post.getAccountId() != null) {
+                notificationService.send(Long.parseLong(post.getAccountId()), actorId,
+                        NotificationType.POST_COMMENTED, TargetType.POST, postId);
+            }
+        }
+
+        return buildCommentResponse(saved);
     }
 
     @Transactional
@@ -135,6 +158,11 @@ public class CommentService {
                 .orElseThrow(() -> new Exception("Account not found."));
         user.getLikedCommentIds().add(commentId);
         accountRepository.save(user);
+
+        if (comment.getAccountId() != null) {
+            notificationService.send(comment.getAccountId(), Long.parseLong(accountId),
+                    NotificationType.COMMENT_LIKED, TargetType.POST, comment.getPostId());
+        }
 
         return buildCommentResponse(comment);
     }
