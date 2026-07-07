@@ -22,8 +22,12 @@ import java.util.Set;
 @Service
 public class ReportService {
 
-    private static final Set<ReportReason> POST_COMMENT_REASONS = EnumSet.of(
+    private static final Set<ReportReason> POST_REASONS = EnumSet.of(
             ReportReason.SPAM, ReportReason.ILLEGAL_LISTING, ReportReason.INAPPROPRIATE_CONTENT,
+            ReportReason.HARASSMENT, ReportReason.MISINFORMATION, ReportReason.OTHER);
+
+    private static final Set<ReportReason> COMMENT_REASONS = EnumSet.of(
+            ReportReason.SPAM, ReportReason.INAPPROPRIATE_CONTENT,
             ReportReason.HARASSMENT, ReportReason.MISINFORMATION, ReportReason.OTHER);
 
     private static final Set<ReportReason> PROFILE_REASONS = EnumSet.of(
@@ -49,10 +53,12 @@ public class ReportService {
         }
 
         // Validate reason is valid for target type
+        if (targetType == TargetType.POST && !POST_REASONS.contains(reason))
+            throw new Exception("Reason " + reason + " is not valid for POST reports.");
+        if (targetType == TargetType.COMMENT && !COMMENT_REASONS.contains(reason))
+            throw new Exception("Reason " + reason + " is not valid for COMMENT reports. Note: ILLEGAL_LISTING is only valid for posts.");
         if (targetType == TargetType.PROFILE && !PROFILE_REASONS.contains(reason))
             throw new Exception("Reason " + reason + " is not valid for PROFILE reports.");
-        if ((targetType == TargetType.POST || targetType == TargetType.COMMENT) && !POST_COMMENT_REASONS.contains(reason))
-            throw new Exception("Reason " + reason + " is not valid for " + targetType + " reports.");
 
         // Prevent self-reporting
         if (targetType == TargetType.PROFILE && dto.targetId().equals(reporterAccountId))
