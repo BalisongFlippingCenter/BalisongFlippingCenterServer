@@ -36,6 +36,7 @@ public class ReportService {
             ReportReason.INAPPROPRIATE_BIO, ReportReason.HARASSMENT, ReportReason.OTHER);
 
     @Autowired private ReportRepository reportRepository;
+    @Autowired private ModerationService moderationService;
 
     @Transactional
     public AdminReportDto submitReport(Long reporterAccountId, CreateReportDto dto) throws Exception {
@@ -76,7 +77,9 @@ public class ReportService {
         report.setReason(reason);
         report.setAdditionalNote(dto.additionalNote());
 
-        return toAdminDto(reportRepository.save(report));
+        Report saved = reportRepository.save(report);
+        moderationService.evaluate(saved);
+        return toAdminDto(reportRepository.findById(saved.getId()).orElse(saved));
     }
 
     public Page<AdminReportDto> getReports(String status, String targetType, int page, int size) throws Exception {

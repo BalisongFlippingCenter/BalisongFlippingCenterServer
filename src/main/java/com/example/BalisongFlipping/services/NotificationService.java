@@ -101,6 +101,22 @@ public class NotificationService {
         notificationRepository.markAllReadForRecipient(accountId);
     }
 
+    // System-generated notification with no actor (moderation actions)
+    public void sendSystem(Long recipientId, NotificationType type, TargetType targetType, Long targetId) {
+        Notification notification = new Notification();
+        notification.setRecipientAccountId(recipientId);
+        notification.setActorAccountId(null);
+        notification.setType(type);
+        notification.setTargetType(targetType);
+        notification.setTargetId(targetId);
+
+        Notification saved = notificationRepository.save(notification);
+        NotificationDto dto = toDto(saved, null);
+
+        accountRepository.findById(recipientId).ifPresent(a ->
+                messagingTemplate.convertAndSendToUser(a.getEmail(), "/queue/notifications", dto));
+    }
+
     // -------------------------------------------------------------------------
     // DTO builder
     // -------------------------------------------------------------------------
@@ -133,6 +149,8 @@ public class NotificationService {
             case POST_COMMENTED  -> actorName + " commented on your post";
             case COMMENT_REPLIED -> actorName + " replied to your comment";
             case COMMENT_LIKED   -> actorName + " liked your comment";
+            case NAME_RESET      -> "Your display name was reset for violating community guidelines";
+            case BIO_CLEARED     -> "Your bio was cleared for violating community guidelines";
         };
     }
 }
