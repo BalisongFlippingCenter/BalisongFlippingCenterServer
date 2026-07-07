@@ -4,6 +4,7 @@ public enum ReportReason {
     // POST / COMMENT
     SPAM,
     ILLEGAL_LISTING,
+    UNSAFE_CONTENT,
     INAPPROPRIATE_CONTENT,
     HARASSMENT,
     MISINFORMATION,

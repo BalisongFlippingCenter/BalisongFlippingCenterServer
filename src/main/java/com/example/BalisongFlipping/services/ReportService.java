@@ -23,8 +23,9 @@ import java.util.Set;
 public class ReportService {
 
     private static final Set<ReportReason> POST_REASONS = EnumSet.of(
-            ReportReason.SPAM, ReportReason.ILLEGAL_LISTING, ReportReason.INAPPROPRIATE_CONTENT,
-            ReportReason.HARASSMENT, ReportReason.MISINFORMATION, ReportReason.OTHER);
+            ReportReason.SPAM, ReportReason.ILLEGAL_LISTING, ReportReason.UNSAFE_CONTENT,
+            ReportReason.INAPPROPRIATE_CONTENT, ReportReason.HARASSMENT,
+            ReportReason.MISINFORMATION, ReportReason.OTHER);
 
     private static final Set<ReportReason> COMMENT_REASONS = EnumSet.of(
             ReportReason.SPAM, ReportReason.INAPPROPRIATE_CONTENT,
