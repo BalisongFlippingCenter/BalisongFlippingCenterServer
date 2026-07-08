@@ -189,6 +189,20 @@ public class PostService {
             }
         }
 
+        // Resolve per-media referenceKnife objects
+        if (post.getMediaFiles() != null) {
+            for (PostMedia pm : post.getMediaFiles()) {
+                if (pm.getReferenceKnifeId() != null) {
+                    CollectionKnife k = collectionKnifeRepository.findById(pm.getReferenceKnifeId()).orElse(null);
+                    if (k != null) {
+                        pm.setReferenceKnife(new PostKnifeDto(
+                                k.getId(), k.getDisplayName(), k.getKnifeMaker(),
+                                k.getBaseKnifeModel(), k.getCoverPhoto()));
+                    }
+                }
+            }
+        }
+
         PostKnifeDto referenceKnife = null;
         Long referenceKnifeId = post.getReferenceKnifeId();
         if (referenceKnifeId != null) {
