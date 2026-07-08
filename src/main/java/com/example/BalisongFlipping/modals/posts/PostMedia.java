@@ -12,6 +12,9 @@ public class PostMedia {
     @Column(name = "is_video")
     private boolean isVideo;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     public PostMedia() {}
 
     public PostMedia(String url, boolean isVideo) {
@@ -24,4 +27,7 @@ public class PostMedia {
 
     public boolean isVideo() { return isVideo; }
     public void setIsVideo(boolean isVideo) { this.isVideo = isVideo; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }

@@ -1,6 +1,7 @@
 package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.postsDtos.CollectionTimelineDto;
+import com.example.BalisongFlipping.dtos.postsDtos.FileMetadataItem;
 import com.example.BalisongFlipping.enums.notifications.NotificationType;
 import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.dtos.postsDtos.PostAuthorDto;
@@ -13,6 +14,7 @@ import com.example.BalisongFlipping.enums.posts.tags.TechniqueTag;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.collectionKnives.CollectionKnife;
+import com.example.BalisongFlipping.modals.collectionKnives.GalleryFile;
 import com.example.BalisongFlipping.modals.collections.Collection;
 import com.example.BalisongFlipping.modals.posts.*;
 import com.example.BalisongFlipping.repositories.AccountRepository;
@@ -20,6 +22,9 @@ import com.example.BalisongFlipping.repositories.CollectionKnifeRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
 import com.example.BalisongFlipping.repositories.PostLikeRepository;
 import com.example.BalisongFlipping.repositories.PostsRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +44,10 @@ import java.util.UUID;
 
 @Service
 public class PostService {
+
+    private record UploadedFile(String key, String url, boolean isVideo) {}
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private PostsRepository postsRepository;
@@ -268,6 +277,7 @@ public class PostService {
             String caption,
             String description,
             String referenceKnifeId,
+            String fileMetadata,
             MultipartFile[] mediaFiles,
             String mode,
             String offeringKnifeId,
@@ -283,9 +293,9 @@ public class PostService {
         PostWrapper created;
         switch (postType.toUpperCase().trim()) {
             case "GENERIC":
-                created = createGenericPost(accountId, caption, description, referenceKnifeId, mediaFiles, tags); break;
+                created = createGenericPost(accountId, caption, fileMetadata, mediaFiles, tags); break;
             case "BUY_SELL":
-                created = createBuySellPost(accountId, caption, description, referenceKnifeId, mediaFiles, mode, offeringKnifeId, price); break;
+                created = createBuySellPost(accountId, caption, description, fileMetadata, mediaFiles, mode, offeringKnifeId, price); break;
             case "TRADE":
                 created = createTradePost(accountId, caption, description, referenceKnifeId, mediaFiles, offeringKnifeId, lookingForText); break;
             case "TRICK_TUTORIAL":
@@ -303,18 +313,30 @@ public class PostService {
     // Generic post
     // -------------------------------------------------------------------------
 
+    @Transactional
     private PostWrapper createGenericPost(
             String accountId,
             String caption,
-            String description,
-            String referenceKnifeId,
+            String fileMetadata,
             MultipartFile[] mediaFiles,
             String[] tags
     ) throws Exception {
         if (mediaFiles == null || mediaFiles.length == 0) throw new Exception("At least one media file is required.");
         if (mediaFiles.length > 10) throw new Exception("Generic posts may not exceed 10 media files.");
 
-        List<PostMedia> media = uploadMediaFiles(accountId, "GENERIC", mediaFiles);
+        List<FileMetadataItem> metaList = parseFileMetadata(fileMetadata, mediaFiles.length);
+        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "GENERIC", mediaFiles);
+
+        List<PostMedia> media = new ArrayList<>();
+        for (int i = 0; i < uploads.size(); i++) {
+            UploadedFile upload = uploads.get(i);
+            PostMedia pm = new PostMedia(upload.url(), upload.isVideo());
+            FileMetadataItem meta = metaList.get(i);
+            if (meta != null && meta.description() != null) {
+                pm.setDescription(meta.description());
+            }
+            media.add(pm);
+        }
 
         List<GenericPostTag> parsedTags = new ArrayList<>();
         if (tags != null) {
@@ -328,9 +350,31 @@ public class PostService {
         }
 
         GenericPost post = new GenericPost();
-        populateBase(post, accountId, caption, description, referenceKnifeId, media);
+        post.setAccountId(accountId);
+        post.setCaption(caption);
+        post.setCreationDate(new Date());
+        post.setMediaFiles(media);
         post.setTags(parsedTags);
-        return postsRepository.save(post);
+        PostWrapper saved = postsRepository.save(post);
+
+        // Add uploaded files to referenced knife galleries
+        for (int i = 0; i < uploads.size(); i++) {
+            FileMetadataItem meta = metaList.get(i);
+            if (meta == null || meta.referenceKnifeId() == null || meta.referenceKnifeId().isBlank()) continue;
+            Long knifeId;
+            try { knifeId = Long.parseLong(meta.referenceKnifeId()); } catch (NumberFormatException e) { continue; }
+            validateKnifeOwnership(accountId, knifeId);
+            CollectionKnife knife = collectionKnifeRepository.findById(knifeId)
+                    .orElseThrow(() -> new Exception("Knife not found."));
+            List<GalleryFile> gallery = knife.getGalleryFiles() != null
+                    ? new ArrayList<>(knife.getGalleryFiles())
+                    : new ArrayList<>();
+            gallery.add(new GalleryFile(uploads.get(i).key(), saved.getId().toString()));
+            knife.setGalleryFiles(gallery);
+            collectionKnifeRepository.save(knife);
+        }
+
+        return saved;
     }
 
     // -------------------------------------------------------------------------
@@ -341,7 +385,7 @@ public class PostService {
             String accountId,
             String caption,
             String description,
-            String referenceKnifeId,
+            String fileMetadata,
             MultipartFile[] mediaFiles,
             String mode,
             String offeringKnifeId,
@@ -360,7 +404,7 @@ public class PostService {
         List<PostMedia> media;
 
         if (parsedMode == BuySellMode.BUYING) {
-            // Buying: exactly 1 image (no videos)
+            // Buying: exactly 1 image (no videos), flat description only
             if (mediaFiles == null || mediaFiles.length != 1) {
                 throw new Exception("Buying posts require exactly 1 image.");
             }
@@ -370,7 +414,7 @@ public class PostService {
             }
             media = uploadMediaFiles(accountId, "BUY_SELL", mediaFiles);
         } else {
-            // Selling: offeringKnifeId required, validate ownership, up to 10 media
+            // Selling: offeringKnifeId required, validate ownership, up to 10 media, per-file descriptions
             if (offeringKnifeId == null || offeringKnifeId.isBlank()) {
                 throw new Exception("offeringKnifeId is required when selling.");
             }
@@ -379,11 +423,23 @@ public class PostService {
 
             if (mediaFiles == null || mediaFiles.length == 0) throw new Exception("At least one media file is required when selling.");
             if (mediaFiles.length > 10) throw new Exception("Selling posts may not exceed 10 media files.");
-            media = uploadMediaFiles(accountId, "BUY_SELL", mediaFiles);
+
+            List<FileMetadataItem> metaList = parseFileMetadata(fileMetadata, mediaFiles.length);
+            List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "BUY_SELL", mediaFiles);
+            media = new ArrayList<>();
+            for (int i = 0; i < uploads.size(); i++) {
+                UploadedFile upload = uploads.get(i);
+                PostMedia pm = new PostMedia(upload.url(), upload.isVideo());
+                FileMetadataItem meta = metaList.get(i);
+                if (meta != null && meta.description() != null) {
+                    pm.setDescription(meta.description());
+                }
+                media.add(pm);
+            }
         }
 
         BuySellPost post = new BuySellPost();
-        populateBase(post, accountId, caption, description, referenceKnifeId, media);
+        populateBase(post, accountId, caption, description, null, media);
         post.setMode(parsedMode);
         if (parsedMode == BuySellMode.SELLING) {
             post.setOfferingKnifeId(Long.parseLong(offeringKnifeId));
@@ -541,8 +597,8 @@ public class PostService {
         }
     }
 
-    private List<PostMedia> uploadMediaFiles(String accountId, String postType, MultipartFile[] files) throws Exception {
-        List<PostMedia> mediaList = new ArrayList<>();
+    private List<UploadedFile> uploadMediaFilesWithKeys(String accountId, String postType, MultipartFile[] files) throws Exception {
+        List<UploadedFile> result = new ArrayList<>();
         String postUuid = UUID.randomUUID().toString();
 
         for (MultipartFile file : files) {
@@ -555,10 +611,35 @@ public class PostService {
 
             String url = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
             boolean isVideo = file.getContentType() != null && file.getContentType().startsWith("video/");
-            mediaList.add(new PostMedia(url, isVideo));
+            result.add(new UploadedFile(key, url, isVideo));
         }
 
+        return result;
+    }
+
+    private List<PostMedia> uploadMediaFiles(String accountId, String postType, MultipartFile[] files) throws Exception {
+        List<PostMedia> mediaList = new ArrayList<>();
+        for (UploadedFile u : uploadMediaFilesWithKeys(accountId, postType, files)) {
+            mediaList.add(new PostMedia(u.url(), u.isVideo()));
+        }
         return mediaList;
+    }
+
+    private List<FileMetadataItem> parseFileMetadata(String fileMetadata, int expectedCount) throws Exception {
+        List<FileMetadataItem> result = new ArrayList<>();
+        if (fileMetadata == null || fileMetadata.isBlank()) {
+            for (int i = 0; i < expectedCount; i++) result.add(null);
+            return result;
+        }
+        try {
+            result = objectMapper.readValue(fileMetadata, new TypeReference<List<FileMetadataItem>>() {});
+        } catch (JsonProcessingException e) {
+            throw new Exception("Invalid fileMetadata JSON: " + e.getMessage());
+        }
+        if (result.size() != expectedCount) {
+            throw new Exception("fileMetadata length (" + result.size() + ") must match file count (" + expectedCount + ").");
+        }
+        return result;
     }
 
     private void validateKnifeOwnership(String accountId, Long knifeId) throws Exception {
