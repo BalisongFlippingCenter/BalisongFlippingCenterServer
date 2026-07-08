@@ -379,17 +379,10 @@ public class PostService {
         for (int i = 0; i < uploads.size(); i++) {
             FileMetadataItem meta = metaList.get(i);
             if (meta == null || meta.referenceKnifeId() == null || meta.referenceKnifeId().isBlank()) continue;
-            Long knifeId;
-            try { knifeId = Long.parseLong(meta.referenceKnifeId()); } catch (NumberFormatException e) { continue; }
-            validateKnifeOwnership(accountId, knifeId);
-            CollectionKnife knife = collectionKnifeRepository.findById(knifeId)
-                    .orElseThrow(() -> new Exception("Knife not found."));
-            List<GalleryFile> gallery = knife.getGalleryFiles() != null
-                    ? new ArrayList<>(knife.getGalleryFiles())
-                    : new ArrayList<>();
-            gallery.add(new GalleryFile(uploads.get(i).url(), saved.getId().toString()));
-            knife.setGalleryFiles(gallery);
-            collectionKnifeRepository.save(knife);
+            try {
+                Long knifeId = Long.parseLong(meta.referenceKnifeId());
+                addFilesToKnifeGallery(accountId, knifeId, List.of(uploads.get(i).url()), saved.getId().toString());
+            } catch (NumberFormatException ignored) {}
         }
 
         return saved;
@@ -465,7 +458,15 @@ public class PostService {
         if (price != null && !price.isBlank()) {
             try { post.setPrice(new BigDecimal(price)); } catch (NumberFormatException ignored) {}
         }
-        return postsRepository.save(post);
+        PostWrapper saved = postsRepository.save(post);
+
+        // Add all selling photos to the offering knife's gallery
+        if (parsedMode == BuySellMode.SELLING) {
+            List<String> urls = media.stream().map(PostMedia::getUrl).toList();
+            addFilesToKnifeGallery(accountId, Long.parseLong(offeringKnifeId), urls, saved.getId().toString());
+        }
+
+        return saved;
     }
 
     // -------------------------------------------------------------------------
@@ -540,13 +541,23 @@ public class PostService {
 
         List<TechniqueTag> parsedTechniqueTags = parseTechniqueTags(techniqueTags, 2);
 
-        List<PostMedia> media = uploadMediaFiles(accountId, "TRICK_TUTORIAL", mediaFiles);
+        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "TRICK_TUTORIAL", mediaFiles);
+        List<PostMedia> media = uploads.stream().map(u -> new PostMedia(u.url(), u.isVideo())).toList();
 
         TrickTutorialPost post = new TrickTutorialPost();
         populateBase(post, accountId, caption, description, referenceKnifeId, media);
         post.setDifficultyTag(parsedDifficulty);
         post.setTechniqueTags(parsedTechniqueTags);
-        return postsRepository.save(post);
+        PostWrapper saved = postsRepository.save(post);
+
+        if (referenceKnifeId != null && !referenceKnifeId.isBlank()) {
+            try {
+                addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
+                        List.of(uploads.get(0).url()), saved.getId().toString());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        return saved;
     }
 
     // -------------------------------------------------------------------------
@@ -582,18 +593,42 @@ public class PostService {
 
         List<TechniqueTag> parsedTechniqueTags = parseTechniqueTags(techniqueTags, 5);
 
-        List<PostMedia> media = uploadMediaFiles(accountId, "COMBO", mediaFiles);
+        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "COMBO", mediaFiles);
+        List<PostMedia> media = uploads.stream().map(u -> new PostMedia(u.url(), u.isVideo())).toList();
 
         ComboPost post = new ComboPost();
         populateBase(post, accountId, caption, description, referenceKnifeId, media);
         post.setDifficultyTag(parsedDifficulty);
         post.setTechniqueTags(parsedTechniqueTags);
-        return postsRepository.save(post);
+        PostWrapper saved = postsRepository.save(post);
+
+        if (referenceKnifeId != null && !referenceKnifeId.isBlank()) {
+            try {
+                addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
+                        List.of(uploads.get(0).url()), saved.getId().toString());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        return saved;
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private void addFilesToKnifeGallery(String accountId, Long knifeId, List<String> fileUrls, String postId) throws Exception {
+        validateKnifeOwnership(accountId, knifeId);
+        CollectionKnife knife = collectionKnifeRepository.findById(knifeId)
+                .orElseThrow(() -> new Exception("Knife not found."));
+        List<GalleryFile> gallery = knife.getGalleryFiles() != null
+                ? new ArrayList<>(knife.getGalleryFiles())
+                : new ArrayList<>();
+        for (String url : fileUrls) {
+            gallery.add(new GalleryFile(url, postId));
+        }
+        knife.setGalleryFiles(gallery);
+        collectionKnifeRepository.save(knife);
+    }
 
     private void populateBase(
             PostWrapper post,
