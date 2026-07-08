@@ -1,7 +1,9 @@
 package com.example.BalisongFlipping.modals.posts;
 
+import com.example.BalisongFlipping.dtos.postsDtos.PostKnifeDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.Transient;
 
 @Embeddable
 public class PostMedia {
@@ -17,6 +19,9 @@ public class PostMedia {
 
     @Column(name = "reference_knife_id")
     private Long referenceKnifeId;
+
+    @Transient
+    private PostKnifeDto referenceKnife;
 
     public PostMedia() {}
 
@@ -36,4 +41,7 @@ public class PostMedia {
 
     public Long getReferenceKnifeId() { return referenceKnifeId; }
     public void setReferenceKnifeId(Long referenceKnifeId) { this.referenceKnifeId = referenceKnifeId; }
+
+    public PostKnifeDto getReferenceKnife() { return referenceKnife; }
+    public void setReferenceKnife(PostKnifeDto referenceKnife) { this.referenceKnife = referenceKnife; }
 }
