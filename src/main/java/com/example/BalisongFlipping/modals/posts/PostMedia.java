@@ -15,6 +15,9 @@ public class PostMedia {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "reference_knife_id")
+    private Long referenceKnifeId;
+
     public PostMedia() {}
 
     public PostMedia(String url, boolean isVideo) {
@@ -30,4 +33,7 @@ public class PostMedia {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Long getReferenceKnifeId() { return referenceKnifeId; }
+    public void setReferenceKnifeId(Long referenceKnifeId) { this.referenceKnifeId = referenceKnifeId; }
 }
