@@ -387,7 +387,7 @@ public class PostService {
             List<GalleryFile> gallery = knife.getGalleryFiles() != null
                     ? new ArrayList<>(knife.getGalleryFiles())
                     : new ArrayList<>();
-            gallery.add(new GalleryFile(uploads.get(i).key(), saved.getId().toString()));
+            gallery.add(new GalleryFile(uploads.get(i).url(), saved.getId().toString()));
             knife.setGalleryFiles(gallery);
             collectionKnifeRepository.save(knife);
         }
