@@ -332,8 +332,12 @@ public class PostService {
             UploadedFile upload = uploads.get(i);
             PostMedia pm = new PostMedia(upload.url(), upload.isVideo());
             FileMetadataItem meta = metaList.get(i);
-            if (meta != null && meta.description() != null) {
-                pm.setDescription(meta.description());
+            if (meta != null) {
+                if (meta.description() != null) pm.setDescription(meta.description());
+                if (meta.referenceKnifeId() != null && !meta.referenceKnifeId().isBlank()) {
+                    try { pm.setReferenceKnifeId(Long.parseLong(meta.referenceKnifeId())); }
+                    catch (NumberFormatException ignored) {}
+                }
             }
             media.add(pm);
         }
