@@ -2,6 +2,7 @@ package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.postsDtos.CollectionTimelineDto;
 import com.example.BalisongFlipping.dtos.postsDtos.FileMetadataItem;
+import com.example.BalisongFlipping.dtos.postsDtos.UpdatePostDto;
 import com.example.BalisongFlipping.enums.notifications.NotificationType;
 import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.dtos.postsDtos.PostAuthorDto;
@@ -39,8 +40,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PostService {
@@ -145,6 +149,8 @@ public class PostService {
                 Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), searchTerm);
                 predicates.add(cb.or(captionMatch, descriptionMatch));
             }
+
+            predicates.add(cb.isFalse(root.get("isPrivate")));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -615,6 +621,114 @@ public class PostService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // Update post
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public PostResponseDto updatePost(Long postId, String accountId, UpdatePostDto dto) throws Exception {
+        PostWrapper post = postsRepository.findById(postId)
+                .orElseThrow(() -> new Exception("Post not found."));
+        if (!accountId.equals(post.getAccountId()))
+            throw new Exception("You do not own this post.");
+
+        if (dto.caption() != null && !dto.caption().isBlank())
+            post.setCaption(dto.caption());
+
+        if (dto.isPrivate() != null)
+            post.setPrivate(dto.isPrivate());
+
+        String pid = postId.toString();
+
+        if (post instanceof GenericPost) {
+            List<PostMedia> media = post.getMediaFiles();
+            if (media != null && dto.fileMetadata() != null && !dto.fileMetadata().isBlank()) {
+                List<FileMetadataItem> metaList = parseFileMetadata(dto.fileMetadata(), media.size());
+                for (int i = 0; i < media.size(); i++) {
+                    PostMedia pm = media.get(i);
+                    FileMetadataItem meta = metaList.get(i);
+                    if (meta == null) continue;
+
+                    if (meta.description() != null) pm.setDescription(meta.description());
+
+                    Long oldKnifeId = pm.getReferenceKnifeId();
+                    Long newKnifeId = null;
+                    if (meta.referenceKnifeId() != null && !meta.referenceKnifeId().isBlank()) {
+                        try { newKnifeId = Long.parseLong(meta.referenceKnifeId()); } catch (NumberFormatException ignored) {}
+                    }
+
+                    if (!java.util.Objects.equals(oldKnifeId, newKnifeId)) {
+                        if (oldKnifeId != null) removeFilesFromKnifeGallery(oldKnifeId, List.of(pm.getUrl()), pid);
+                        if (newKnifeId != null) addFilesToKnifeGallery(accountId, newKnifeId, List.of(pm.getUrl()), pid);
+                        pm.setReferenceKnifeId(newKnifeId);
+                    }
+                }
+            }
+        } else {
+            if (dto.description() != null) post.setDescription(dto.description());
+
+            Long oldKnifeId = post.getReferenceKnifeId();
+            Long newKnifeId = null;
+            if (dto.referenceKnifeId() != null && !dto.referenceKnifeId().isBlank()) {
+                try { newKnifeId = Long.parseLong(dto.referenceKnifeId()); } catch (NumberFormatException ignored) {}
+            }
+
+            if (!java.util.Objects.equals(oldKnifeId, newKnifeId)) {
+                List<String> fileUrls = post.getMediaFiles() == null ? List.of()
+                        : post.getMediaFiles().stream().map(PostMedia::getUrl).toList();
+                if (oldKnifeId != null) removeFilesFromKnifeGallery(oldKnifeId, fileUrls, pid);
+                if (newKnifeId != null) addFilesToKnifeGallery(accountId, newKnifeId, fileUrls, pid);
+                post.setReferenceKnifeId(newKnifeId);
+            }
+        }
+
+        return buildPostResponse(postsRepository.save(post));
+    }
+
+    // -------------------------------------------------------------------------
+    // Delete post
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public void deletePost(Long postId, String accountId) throws Exception {
+        PostWrapper post = postsRepository.findById(postId)
+                .orElseThrow(() -> new Exception("Post not found."));
+        if (!accountId.equals(post.getAccountId()))
+            throw new Exception("You do not own this post.");
+
+        String pid = postId.toString();
+
+        // Remove files from knife galleries
+        if (post instanceof GenericPost && post.getMediaFiles() != null) {
+            for (PostMedia pm : post.getMediaFiles()) {
+                if (pm.getReferenceKnifeId() != null)
+                    removeFilesFromKnifeGallery(pm.getReferenceKnifeId(), List.of(pm.getUrl()), pid);
+            }
+        } else if ((post instanceof TrickTutorialPost || post instanceof ComboPost || post instanceof TradePost)
+                && post.getReferenceKnifeId() != null && post.getMediaFiles() != null) {
+            List<String> urls = post.getMediaFiles().stream().map(PostMedia::getUrl).toList();
+            removeFilesFromKnifeGallery(post.getReferenceKnifeId(), urls, pid);
+        } else if (post instanceof BuySellPost bsp && bsp.getMode() == BuySellMode.SELLING
+                && bsp.getOfferingKnifeId() != null && post.getMediaFiles() != null) {
+            List<String> urls = post.getMediaFiles().stream().map(PostMedia::getUrl).toList();
+            removeFilesFromKnifeGallery(bsp.getOfferingKnifeId(), urls, pid);
+        }
+
+        postsRepository.delete(post);
+        accountService.decrementPostCount(accountId);
+    }
+
+    private void removeFilesFromKnifeGallery(Long knifeId, List<String> fileUrls, String postId) {
+        CollectionKnife knife = collectionKnifeRepository.findById(knifeId).orElse(null);
+        if (knife == null || knife.getGalleryFiles() == null) return;
+        Set<String> urlSet = new HashSet<>(fileUrls);
+        List<GalleryFile> updated = knife.getGalleryFiles().stream()
+                .filter(gf -> !(urlSet.contains(gf.getFileId()) && postId.equals(gf.getPostId())))
+                .collect(Collectors.toList());
+        knife.setGalleryFiles(updated);
+        collectionKnifeRepository.save(knife);
+    }
 
     private void addFilesToKnifeGallery(String accountId, Long knifeId, List<String> fileUrls, String postId) throws Exception {
         validateKnifeOwnership(accountId, knifeId);
