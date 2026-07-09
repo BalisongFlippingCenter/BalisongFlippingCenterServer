@@ -53,7 +53,9 @@ public class PostController {
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         try {
-            Page<PostResponseDto> result = postService.getPosts(postType, accountId, difficultyTag, search, page, size);
+            String selfId = null;
+            try { selfId = accountService.getSelf().id(); } catch (Exception ignored) {}
+            Page<PostResponseDto> result = postService.getPosts(postType, accountId, difficultyTag, search, page, size, selfId);
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             log.error("GET /posts/any -> {}", e.getMessage());

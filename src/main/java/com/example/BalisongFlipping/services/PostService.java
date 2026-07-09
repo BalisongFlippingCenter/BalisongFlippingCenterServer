@@ -105,7 +105,7 @@ public class PostService {
         return buildPostResponse(post);
     }
 
-    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, String search, int page, int size) throws Exception {
+    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, String search, int page, int size, String selfId) throws Exception {
         // Resolve before the lambda — checked exceptions can't be thrown from inside Specification.toPredicate
         final Class<? extends PostWrapper> typeClass = (postType != null && !postType.isBlank())
                 ? resolvePostTypeClass(postType)
@@ -150,7 +150,11 @@ public class PostService {
                 predicates.add(cb.or(captionMatch, descriptionMatch));
             }
 
-            predicates.add(cb.isFalse(root.get("isPrivate")));
+            // Show private posts only when the requester is viewing their own profile
+            boolean viewingOwnPosts = selfId != null && selfId.equals(accountId);
+            if (!viewingOwnPosts) {
+                predicates.add(cb.isFalse(root.get("isPrivate")));
+            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
