@@ -34,6 +34,9 @@ public abstract class PostWrapper {
     @CollectionTable(name = "post_media", joinColumns = @JoinColumn(name = "post_id"))
     private List<PostMedia> mediaFiles;
 
+    @Column(name = "is_private")
+    private boolean isPrivate = false;
+
     @Column(name = "like_count")
     private int likeCount = 0;
 
@@ -68,6 +71,9 @@ public abstract class PostWrapper {
 
     public List<PostMedia> getMediaFiles() { return mediaFiles; }
     public void setMediaFiles(List<PostMedia> mediaFiles) { this.mediaFiles = mediaFiles; }
+
+    public boolean isPrivate() { return isPrivate; }
+    public void setPrivate(boolean isPrivate) { this.isPrivate = isPrivate; }
 
     public int getLikeCount() { return likeCount; }
     public void setLikeCount(int likeCount) { this.likeCount = likeCount; }

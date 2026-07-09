@@ -1,6 +1,7 @@
 package com.example.BalisongFlipping.controllers;
 
 import com.example.BalisongFlipping.dtos.postsDtos.PostResponseDto;
+import com.example.BalisongFlipping.dtos.postsDtos.UpdatePostDto;
 import com.example.BalisongFlipping.modals.posts.PostWrapper;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.PostService;
@@ -13,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RequestMapping("/posts")
 @RestController
@@ -106,6 +109,37 @@ public class PostController {
             return new ResponseEntity<>(post, HttpStatus.CREATED);
         } catch (Exception e) {
             log.error("POST /posts/create [{}] -> {}", postType, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Update post — owner only
+    // -------------------------------------------------------------------------
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updatePost(@PathVariable("id") Long id, @RequestBody UpdatePostDto dto) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(postService.updatePost(id, accountId, dto), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("PATCH /posts/{} -> {}", id, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Delete post — owner only
+    // -------------------------------------------------------------------------
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletePost(@PathVariable("id") Long id) {
+        try {
+            String accountId = accountService.getSelf().id();
+            postService.deletePost(id, accountId);
+            return new ResponseEntity<>(Map.of("message", "Post deleted."), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("DELETE /posts/{} -> {}", id, e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
