@@ -232,6 +232,21 @@ public class PostService {
     }
 
     // -------------------------------------------------------------------------
+    // Liked posts
+    // -------------------------------------------------------------------------
+
+    public Page<PostResponseDto> getLikedPosts(String accountId, int page, int size) throws Exception {
+        User user = (User) accountRepository.findById(Long.parseLong(accountId))
+                .orElseThrow(() -> new Exception("Account not found."));
+        Set<Long> likedIds = user.getLikedPostIds();
+        if (likedIds == null || likedIds.isEmpty()) {
+            return org.springframework.data.domain.Page.empty();
+        }
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "creationDate"));
+        return postsRepository.findByIdIn(likedIds, pageable).map(this::buildPostResponse);
+    }
+
+    // -------------------------------------------------------------------------
     // Like / Unlike
     // -------------------------------------------------------------------------
 
