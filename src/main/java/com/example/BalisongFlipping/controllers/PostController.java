@@ -116,6 +116,24 @@ public class PostController {
     }
 
     // -------------------------------------------------------------------------
+    // Liked posts — requires auth
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/me/liked")
+    public ResponseEntity<?> getLikedPosts(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size
+    ) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return new ResponseEntity<>(postService.getLikedPosts(accountId, page, size), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /posts/me/liked -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Update post — owner only
     // -------------------------------------------------------------------------
 
