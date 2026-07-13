@@ -50,12 +50,27 @@ public class PostController {
             @RequestParam(value = "difficultyTag", required = false) String difficultyTag,
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "knifeBladeStyle", required = false) String knifeBladeStyle,
+            @RequestParam(value = "knifeBladeMaterial", required = false) String knifeBladeMaterial,
+            @RequestParam(value = "knifeBladeFinish", required = false) String knifeBladeFinish,
+            @RequestParam(value = "knifeHandleMaterial", required = false) String knifeHandleMaterial,
+            @RequestParam(value = "knifeHandleConstruction", required = false) String knifeHandleConstruction,
+            @RequestParam(value = "knifeHandleFinish", required = false) String knifeHandleFinish,
+            @RequestParam(value = "knifePivotSystem", required = false) String knifePivotSystem,
+            @RequestParam(value = "knifePinSystem", required = false) String knifePinSystem,
+            @RequestParam(value = "knifeLatchType", required = false) String knifeLatchType,
+            @RequestParam(value = "knifeType", required = false) String knifeType
     ) {
         try {
             String selfId = null;
             try { selfId = accountService.getSelf().id(); } catch (Exception ignored) {}
-            Page<PostResponseDto> result = postService.getPosts(postType, accountId, difficultyTag, search, page, size, selfId);
+            Page<PostResponseDto> result = postService.getPosts(
+                    postType, accountId, difficultyTag, search, page, size, selfId,
+                    knifeBladeStyle, knifeBladeMaterial, knifeBladeFinish,
+                    knifeHandleMaterial, knifeHandleConstruction, knifeHandleFinish,
+                    knifePivotSystem, knifePinSystem, knifeLatchType, knifeType
+            );
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             log.error("GET /posts/any -> {}", e.getMessage());
