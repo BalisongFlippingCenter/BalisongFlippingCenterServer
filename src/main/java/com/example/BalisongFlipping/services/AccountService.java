@@ -7,6 +7,7 @@ import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.dtos.UpdatePreferencesDto;
 import com.example.BalisongFlipping.dtos.UpdateSocialLinksDto;
 import com.example.BalisongFlipping.dtos.UserDto;
+import com.example.BalisongFlipping.dtos.UserSearchResultDto;
 import com.example.BalisongFlipping.modals.accounts.Account;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public interface AccountService {
     // public profile reads (no auth)
     PublicProfileDto getPublicProfileById(String accountId) throws Exception;
     PublicProfileDto getPublicProfileByHandle(String displayName, String identifierCode) throws Exception;
+    List<UserSearchResultDto> searchUsers(String query);
 
     // profile
     DisplayNameChangeDto changeDisplayName(String accountId, String newDisplayName) throws Exception;
