@@ -23,11 +23,14 @@ import com.example.BalisongFlipping.repositories.CollectionKnifeRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
 import com.example.BalisongFlipping.repositories.PostLikeRepository;
 import com.example.BalisongFlipping.repositories.PostsRepository;
+import com.example.BalisongFlipping.enums.knives.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -105,7 +108,14 @@ public class PostService {
         return buildPostResponse(post);
     }
 
-    public Page<PostResponseDto> getPosts(String postType, String accountId, String difficultyTag, String search, int page, int size, String selfId) throws Exception {
+    public Page<PostResponseDto> getPosts(
+            String postType, String accountId, String difficultyTag, String search,
+            int page, int size, String selfId,
+            String knifeBladeStyle, String knifeBladeMaterial, String knifeBladeFinish,
+            String knifeHandleMaterial, String knifeHandleConstruction, String knifeHandleFinish,
+            String knifePivotSystem, String knifePinSystem, String knifeLatchType,
+            String knifeType
+    ) throws Exception {
         // Resolve before the lambda — checked exceptions can't be thrown from inside Specification.toPredicate
         final Class<? extends PostWrapper> typeClass = (postType != null && !postType.isBlank())
                 ? resolvePostTypeClass(postType)
@@ -118,6 +128,23 @@ public class PostService {
         final String searchTerm = (search != null && !search.isBlank())
                 ? "%" + search.trim().toLowerCase() + "%"
                 : null;
+
+        final BladeStyle parsedBladeStyle = parseKnifeEnum(BladeStyle.class, knifeBladeStyle);
+        final BladeMaterial parsedBladeMaterial = parseKnifeEnum(BladeMaterial.class, knifeBladeMaterial);
+        final BladeFinish parsedBladeFinish = parseKnifeEnum(BladeFinish.class, knifeBladeFinish);
+        final HandleMaterial parsedHandleMaterial = parseKnifeEnum(HandleMaterial.class, knifeHandleMaterial);
+        final HandleConstruction parsedHandleConstruction = parseKnifeEnum(HandleConstruction.class, knifeHandleConstruction);
+        final HandleFinish parsedHandleFinish = parseKnifeEnum(HandleFinish.class, knifeHandleFinish);
+        final PivotSystem parsedPivotSystem = parseKnifeEnum(PivotSystem.class, knifePivotSystem);
+        final PinSystem parsedPinSystem = parseKnifeEnum(PinSystem.class, knifePinSystem);
+        final LatchType parsedLatchType = parseKnifeEnum(LatchType.class, knifeLatchType);
+        final KnifeType parsedKnifeType = parseKnifeEnum(KnifeType.class, knifeType);
+
+        final boolean knifeFiltersPresent = parsedBladeStyle != null || parsedBladeMaterial != null
+                || parsedBladeFinish != null || parsedHandleMaterial != null
+                || parsedHandleConstruction != null || parsedHandleFinish != null
+                || parsedPivotSystem != null || parsedPinSystem != null
+                || parsedLatchType != null || parsedKnifeType != null;
 
         Specification<PostWrapper> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -148,6 +175,34 @@ public class PostService {
                 Predicate captionMatch = cb.like(cb.lower(root.get("caption")), searchTerm);
                 Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), searchTerm);
                 predicates.add(cb.or(captionMatch, descriptionMatch));
+            }
+
+            if (knifeFiltersPresent) {
+                Subquery<Long> knifeSub = query.subquery(Long.class);
+                Root<CollectionKnife> kr = knifeSub.from(CollectionKnife.class);
+                knifeSub.select(kr.get("id"));
+                List<Predicate> kp = new ArrayList<>();
+                if (parsedBladeStyle != null) kp.add(cb.equal(kr.get("bladeStyle"), parsedBladeStyle));
+                if (parsedBladeMaterial != null) kp.add(cb.equal(kr.get("bladeMaterial"), parsedBladeMaterial));
+                if (parsedBladeFinish != null) kp.add(cb.equal(kr.get("bladeFinish"), parsedBladeFinish));
+                if (parsedHandleMaterial != null) kp.add(cb.equal(kr.get("handleMaterial"), parsedHandleMaterial));
+                if (parsedHandleConstruction != null) kp.add(cb.equal(kr.get("handleConstruction"), parsedHandleConstruction));
+                if (parsedHandleFinish != null) kp.add(cb.equal(kr.get("handleFinish"), parsedHandleFinish));
+                if (parsedPivotSystem != null) kp.add(cb.equal(kr.get("pivotSystem"), parsedPivotSystem));
+                if (parsedPinSystem != null) kp.add(cb.equal(kr.get("pinSystem"), parsedPinSystem));
+                if (parsedLatchType != null) kp.add(cb.equal(kr.get("latchType"), parsedLatchType));
+                if (parsedKnifeType != null) kp.add(cb.equal(kr.get("knifeType"), parsedKnifeType));
+                knifeSub.where(cb.and(kp.toArray(new Predicate[0])));
+
+                Predicate buySellMatch = cb.and(
+                        cb.equal(root.type(), BuySellPost.class),
+                        cb.treat(root, BuySellPost.class).get("offeringKnifeId").in(knifeSub)
+                );
+                Predicate tradeMatch = cb.and(
+                        cb.equal(root.type(), TradePost.class),
+                        cb.treat(root, TradePost.class).get("offeringKnifeId").in(knifeSub)
+                );
+                predicates.add(cb.or(buySellMatch, tradeMatch));
             }
 
             // Show private posts only when the requester is viewing their own profile
@@ -189,13 +244,7 @@ public class PostService {
         if (offeringKnifeId != null) {
             CollectionKnife knife = collectionKnifeRepository.findById(offeringKnifeId).orElse(null);
             if (knife != null) {
-                offeringKnife = new PostKnifeDto(
-                        knife.getId(),
-                        knife.getDisplayName(),
-                        knife.getKnifeMaker(),
-                        knife.getBaseKnifeModel(),
-                        knife.getCoverPhoto()
-                );
+                offeringKnife = PostKnifeDto.from(knife);
             }
         }
 
@@ -205,9 +254,7 @@ public class PostService {
                 if (pm.getReferenceKnifeId() != null) {
                     CollectionKnife k = collectionKnifeRepository.findById(pm.getReferenceKnifeId()).orElse(null);
                     if (k != null) {
-                        pm.setReferenceKnife(new PostKnifeDto(
-                                k.getId(), k.getDisplayName(), k.getKnifeMaker(),
-                                k.getBaseKnifeModel(), k.getCoverPhoto()));
+                        pm.setReferenceKnife(PostKnifeDto.from(k));
                     }
                 }
             }
@@ -218,13 +265,7 @@ public class PostService {
         if (referenceKnifeId != null) {
             CollectionKnife knife = collectionKnifeRepository.findById(referenceKnifeId).orElse(null);
             if (knife != null) {
-                referenceKnife = new PostKnifeDto(
-                        knife.getId(),
-                        knife.getDisplayName(),
-                        knife.getKnifeMaker(),
-                        knife.getBaseKnifeModel(),
-                        knife.getCoverPhoto()
-                );
+                referenceKnife = PostKnifeDto.from(knife);
             }
         }
 
@@ -836,6 +877,12 @@ public class PostService {
         if (!knife.getCollectionId().equals(userCollection.getId())) {
             throw new Exception("Knife does not belong to your collection.");
         }
+    }
+
+    private <E extends Enum<E>> E parseKnifeEnum(Class<E> cls, String value) throws Exception {
+        if (value == null || value.isBlank()) return null;
+        try { return Enum.valueOf(cls, value.toUpperCase().trim()); }
+        catch (IllegalArgumentException e) { throw new Exception("Invalid " + cls.getSimpleName() + ": " + value); }
     }
 
     private List<TechniqueTag> parseTechniqueTags(String[] techniqueTags, int maxCount) throws Exception {
