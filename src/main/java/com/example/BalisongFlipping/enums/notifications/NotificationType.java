@@ -7,5 +7,6 @@ public enum NotificationType {
     COMMENT_REPLIED,
     COMMENT_LIKED,
     NAME_RESET,
-    BIO_CLEARED
+    BIO_CLEARED,
+    MESSAGE_RECEIVED
 }

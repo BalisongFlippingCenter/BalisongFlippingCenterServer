@@ -151,6 +151,7 @@ public class NotificationService {
             case COMMENT_LIKED   -> actorName + " liked your comment";
             case NAME_RESET      -> "Your display name was reset for violating community guidelines";
             case BIO_CLEARED     -> "Your bio was cleared for violating community guidelines";
+            case MESSAGE_RECEIVED -> actorName + " sent you a message";
         };
     }
 }
