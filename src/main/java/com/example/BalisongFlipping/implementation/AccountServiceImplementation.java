@@ -152,6 +152,19 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     }
 
     @Override
+    public List<UserSearchResultDto> searchUsers(String query) {
+        if (query == null || query.isBlank()) return List.of();
+        return accountRepository.searchByDisplayNameOrIdentifierCode(query.trim()).stream()
+                .map(u -> new UserSearchResultDto(
+                        String.valueOf(u.getId()),
+                        u.getDisplayName(),
+                        u.getIdentifierCode(),
+                        u.getProfileImg(),
+                        u.getBio()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
     public PublicProfileDto getPublicProfileById(String accountId) throws Exception {
         Account account = accountRepository.findById(Long.parseLong(accountId))
                 .orElseThrow(() -> new Exception("Account not found."));

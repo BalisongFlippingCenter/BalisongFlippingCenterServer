@@ -38,6 +38,16 @@ public class AccountController {
     // Public profile reads — no auth required
     // -------------------------------------------------------------------------
 
+    @GetMapping("/any/search")
+    public ResponseEntity<?> searchUsers(@RequestParam("q") String query) {
+        try {
+            return new ResponseEntity<>(accountService.searchUsers(query), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /accounts/any/search?q={} -> {}", query, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
     @GetMapping("/any/{accountId}")
     public ResponseEntity<?> getPublicProfileById(@PathVariable("accountId") String accountId) {
         try {
