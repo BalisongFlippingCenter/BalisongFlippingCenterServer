@@ -26,6 +26,7 @@ public record UserDto(
         String personalWebsiteLink,
         Set<Long> likedPostIds,
         Set<Long> likedCommentIds,
+        Set<Long> followingIds,
         int followerCount,
         int followingCount,
         int postCount

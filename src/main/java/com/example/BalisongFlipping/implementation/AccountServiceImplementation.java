@@ -29,6 +29,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AccountServiceImplementation implements com.example.BalisongFlipping.services.AccountService {
@@ -51,10 +53,14 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     // DTO conversion
     // -------------------------------------------------------------------------
 
-    public static UserDto convertAccountToDto(Account account) throws Exception {
+    @Override
+    public UserDto toUserDto(Account account) throws Exception {
         if (account == null) throw new Exception("Passed account is null.");
 
         User user = (User) account;
+        Set<Long> followingIds = followRepository.findByIdFollowerId(account.getId())
+                .stream().map(f -> f.getId().getFollowingId()).collect(java.util.stream.Collectors.toSet());
+
         return new UserDto(
                 account.getId().toString(),
                 account.getEmail(),
@@ -79,6 +85,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
                 user.getPersonalWebsiteLink(),
                 user.getLikedPostIds(),
                 user.getLikedCommentIds(),
+                followingIds,
                 user.getFollowerCount(),
                 user.getFollowingCount(),
                 user.getPostCount());
@@ -124,7 +131,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     public UserDto getSelf() throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Account currentAccount = (Account) authentication.getPrincipal();
-        return convertAccountToDto(currentAccount);
+        return toUserDto(currentAccount);
     }
 
     @Override
@@ -227,7 +234,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
             throw new Exception("Profile caption cannot exceed 150 characters.");
         User user = getUser(accountId);
         user.setBio(bio != null ? bio : "");
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     @Override
@@ -270,7 +277,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         user.setRedditLink(dto.redditLink() != null ? dto.redditLink() : "");
         user.setPersonalEmailLink(dto.personalEmailLink() != null ? dto.personalEmailLink() : "");
         user.setPersonalWebsiteLink(dto.personalWebsiteLink() != null ? dto.personalWebsiteLink() : "");
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     private void validateLinkField(String fieldName, String value, boolean isEmail) throws Exception {
@@ -293,7 +300,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         User user = getUser(accountId);
         if (dto.measurementUnit() != null) user.setMeasurementUnit(dto.measurementUnit());
         if (dto.currency() != null) user.setCurrency(dto.currency());
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     // -------------------------------------------------------------------------
@@ -310,7 +317,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         User user = getUser(accountId);
         user.setDisplayName(displayName);
         user.setIdentifierCode(generateIdentifierCode(displayName));
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     // -------------------------------------------------------------------------
@@ -342,7 +349,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
         notificationService.send(targetLong, followerLong, NotificationType.NEW_FOLLOWER, TargetType.PROFILE, followerLong);
 
-        return convertAccountToDto(follower);
+        return toUserDto(follower);
     }
 
     @Override
@@ -365,7 +372,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         target.setFollowerCount(Math.max(0, target.getFollowerCount() - 1));
         accountRepository.save(target);
 
-        return convertAccountToDto(follower);
+        return toUserDto(follower);
     }
 
     @Override
@@ -465,7 +472,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
         emailTokenRepository.delete(token);
         user.setEmail(dto.newEmail());
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     @Override
@@ -513,7 +520,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     public UserDto hideAccount(String accountId) throws Exception {
         User user = getUser(accountId);
         user.setHidden(!user.isHidden());
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     @Override
@@ -547,7 +554,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
         // wipe posts
         postsRepository.deleteAllByAccountId(accountId);
 
-        return convertAccountToDto(accountRepository.save(user));
+        return toUserDto(accountRepository.save(user));
     }
 
     @Override

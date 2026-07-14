@@ -4,7 +4,6 @@ import com.example.BalisongFlipping.BalisongFlippingApplication;
 import com.example.BalisongFlipping.dtos.*;
 import com.example.BalisongFlipping.dtos.ConfirmForgotPasswordDto;
 import com.example.BalisongFlipping.dtos.ForgotPasswordDto;
-import com.example.BalisongFlipping.implementation.AccountServiceImplementation;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
@@ -211,7 +210,7 @@ public class AuthController {
             CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
 
             // return account info with access token
-            return new ResponseEntity<>(new LoginResponseDto(accessToken, refreshToken.getToken(), AccountServiceImplementation.convertAccountToDto(authenticatedUser), collectionData), HttpStatus.OK);
+            return new ResponseEntity<>(new LoginResponseDto(accessToken, refreshToken.getToken(), accountService.toUserDto(authenticatedUser), collectionData), HttpStatus.OK);
         }
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> ", e.getMessage());
@@ -243,7 +242,7 @@ public class AuthController {
             return new ResponseEntity<>(new GoogleLoginResponseDto(
                     accessToken,
                     refreshToken.getToken(),
-                    AccountServiceImplementation.convertAccountToDto(account),
+                    accountService.toUserDto(account),
                     collectionData,
                     result.isNewUser()
             ), HttpStatus.OK);
@@ -320,7 +319,7 @@ public class AuthController {
             LoginResponseDto loginResponse = new LoginResponseDto(
                     jwtService.generateAccessToken(verifiedToken.getOwner()),
                     verifiedToken.getToken(),
-                    AccountServiceImplementation.convertAccountToDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
+                    accountService.toUserDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
                     collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
             );
 
