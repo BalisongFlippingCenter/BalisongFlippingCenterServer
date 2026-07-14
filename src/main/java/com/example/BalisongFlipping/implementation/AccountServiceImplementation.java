@@ -369,6 +369,46 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     }
 
     @Override
+    public List<UserSearchResultDto> getFollowing(String accountId) throws Exception {
+        Long uid = Long.parseLong(accountId);
+        return followRepository.findByIdFollowerId(uid).stream()
+                .map(f -> {
+                    User u = accountRepository.findById(f.getId().getFollowingId())
+                            .map(a -> (User) a).orElse(null);
+                    if (u == null) return null;
+                    return new UserSearchResultDto(u.getId().toString(), u.getDisplayName(),
+                            u.getIdentifierCode(), u.getProfileImg(), u.getBio());
+                })
+                .filter(dto -> dto != null)
+                .toList();
+    }
+
+    @Override
+    public List<UserSearchResultDto> getFollowers(String accountId) throws Exception {
+        Long uid = Long.parseLong(accountId);
+        return followRepository.findByIdFollowingId(uid).stream()
+                .map(f -> {
+                    User u = accountRepository.findById(f.getId().getFollowerId())
+                            .map(a -> (User) a).orElse(null);
+                    if (u == null) return null;
+                    return new UserSearchResultDto(u.getId().toString(), u.getDisplayName(),
+                            u.getIdentifierCode(), u.getProfileImg(), u.getBio());
+                })
+                .filter(dto -> dto != null)
+                .toList();
+    }
+
+    @Override
+    public boolean isFollowing(String followerId, String targetId) {
+        try {
+            return followRepository.existsById(
+                    new FollowId(Long.parseLong(followerId), Long.parseLong(targetId)));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
     @Transactional
     public void incrementPostCount(String accountId) throws Exception {
         User user = getUser(accountId);
