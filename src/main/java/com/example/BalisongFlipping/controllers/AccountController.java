@@ -173,6 +173,39 @@ public class AccountController {
     // Follow / unfollow
     // -------------------------------------------------------------------------
 
+    @GetMapping("/any/{accountId}/following")
+    public ResponseEntity<?> getFollowing(@PathVariable("accountId") String accountId) {
+        try {
+            return ResponseEntity.ok(accountService.getFollowing(accountId));
+        } catch (Exception e) {
+            log.error("GET /accounts/any/{}/following -> {}", accountId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @GetMapping("/any/{accountId}/followers")
+    public ResponseEntity<?> getFollowers(@PathVariable("accountId") String accountId) {
+        try {
+            return ResponseEntity.ok(accountService.getFollowers(accountId));
+        } catch (Exception e) {
+            log.error("GET /accounts/any/{}/followers -> {}", accountId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @GetMapping("/any/{targetId}/follow")
+    public ResponseEntity<?> checkIsFollowing(@PathVariable("targetId") String targetId) {
+        try {
+            String selfId = null;
+            try { selfId = accountService.getSelf().id(); } catch (Exception ignored) {}
+            boolean following = selfId != null && accountService.isFollowing(selfId, targetId);
+            return ResponseEntity.ok(java.util.Map.of("following", following));
+        } catch (Exception e) {
+            log.error("GET /accounts/any/{}/follow -> {}", targetId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
     @PostMapping("/any/{targetId}/follow")
     public ResponseEntity<?> followAccount(@PathVariable("targetId") String targetId) {
         try {

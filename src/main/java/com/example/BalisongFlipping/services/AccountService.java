@@ -46,6 +46,9 @@ public interface AccountService {
     // follow / unfollow
     UserDto followAccount(String followerId, String targetId) throws Exception;
     UserDto unfollowAccount(String followerId, String targetId) throws Exception;
+    List<UserSearchResultDto> getFollowing(String accountId) throws Exception;
+    List<UserSearchResultDto> getFollowers(String accountId) throws Exception;
+    boolean isFollowing(String followerId, String targetId);
 
     // post count maintenance
     void incrementPostCount(String accountId) throws Exception;
