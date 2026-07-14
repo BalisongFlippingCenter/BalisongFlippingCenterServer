@@ -11,6 +11,7 @@ import com.example.BalisongFlipping.dtos.UserSearchResultDto;
 import com.example.BalisongFlipping.modals.accounts.Account;
 
 import java.util.List;
+import java.util.Set;
 
 public interface AccountService {
 
@@ -18,6 +19,7 @@ public interface AccountService {
 
     Account getAccount(String accountId) throws Exception;
     UserDto getSelf() throws Exception;
+    UserDto toUserDto(Account account) throws Exception;
     Account getAccountByEmail(String userEmail) throws Exception;
     List<Account> allUsers();
     Boolean checkForAccountExistance(String accountId) throws Exception;
