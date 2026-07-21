@@ -66,21 +66,20 @@ public class ConversationService {
 
     @Transactional
     public MessageDto sendMessage(String senderAccountId, String recipientAccountId, String body,
-                                  String mediaUrl, boolean isVideo) throws Exception {
+                                  String mediaUrl, boolean isVideo, Long replyToId) throws Exception {
         boolean hasBody  = body != null && !body.isBlank();
         boolean hasMedia = mediaUrl != null;
         if (!hasBody && !hasMedia) throw new Exception("A message must contain text or a media file.");
         if (hasBody && body.length() > 2000) throw new Exception("Message body may not exceed 2000 characters.");
         if (senderAccountId.equals(recipientAccountId)) throw new Exception("Cannot message yourself.");
 
-        Long senderId = Long.parseLong(senderAccountId);
+        Long senderId    = Long.parseLong(senderAccountId);
         Long recipientId = Long.parseLong(recipientAccountId);
 
         User recipient = accountRepository.findById(recipientId)
                 .map(a -> (User) a)
                 .orElseThrow(() -> new Exception("Recipient not found."));
 
-        // Canonical pair: smaller ID is always participantA
         Long aId = Math.min(senderId, recipientId);
         Long bId = Math.max(senderId, recipientId);
         boolean senderIsA = senderId.equals(aId);
@@ -98,7 +97,6 @@ public class ConversationService {
             conv.setParticipantBId(bId);
         }
 
-        // Un-delete for both sides when a new message is sent
         conv.setDeletedByA(false);
         conv.setDeletedByB(false);
 
@@ -115,28 +113,34 @@ public class ConversationService {
 
         Conversation savedConv = conversationRepository.save(conv);
 
+        if (replyToId != null) {
+            Message replied = messageRepository.findById(replyToId)
+                    .orElseThrow(() -> new Exception("Replied-to message not found."));
+            if (!replied.getConversationId().equals(savedConv.getId())) {
+                throw new Exception("Cannot reply to a message from a different conversation.");
+            }
+        }
+
         Message msg = new Message();
         msg.setConversationId(savedConv.getId());
         msg.setSenderId(senderId);
         msg.setBody(hasBody ? body : "");
         msg.setMediaUrl(mediaUrl);
         msg.setVideo(isVideo);
+        msg.setReplyToId(replyToId);
         msg.setSentAt(new Date());
         Message savedMsg = messageRepository.save(msg);
 
         MessageDto messageDto = toMessageDto(savedMsg);
         ConversationDto convDto = toConversationDto(savedConv, recipientId);
 
-        // Push to recipient if connected
         String recipientEmail = recipient.getEmail();
         messagingTemplate.convertAndSendToUser(recipientEmail, "/queue/messages", messageDto);
         messagingTemplate.convertAndSendToUser(recipientEmail, "/queue/conversations", convDto);
 
-        // In-app notification
         notificationService.send(recipientId, senderId, NotificationType.MESSAGE_RECEIVED,
                 TargetType.CONVERSATION, savedConv.getId());
 
-        // Email notification for first-ever or dormant conversation
         if (isNewConversation || isDormant) {
             User sender = (User) accountRepository.findById(senderId).orElse(null);
             String senderName = sender != null ? sender.getDisplayName() : "Someone";
@@ -150,6 +154,43 @@ public class ConversationService {
         }
 
         return messageDto;
+    }
+
+    // -------------------------------------------------------------------------
+    // Edit message
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public MessageDto editMessage(String accountId, Long messageId, String newBody) throws Exception {
+        if (newBody == null || newBody.isBlank()) throw new Exception("Message body cannot be empty.");
+        if (newBody.length() > 2000) throw new Exception("Message body may not exceed 2000 characters.");
+
+        Long uid = Long.parseLong(accountId);
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new Exception("Message not found."));
+        if (!msg.getSenderId().equals(uid)) throw new Exception("You can only edit your own messages.");
+        if (msg.isDeleted()) throw new Exception("Cannot edit a deleted message.");
+
+        msg.setBody(newBody.trim());
+        msg.setEditedAt(new Date());
+        return toMessageDto(messageRepository.save(msg));
+    }
+
+    // -------------------------------------------------------------------------
+    // Delete message (soft)
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public MessageDto deleteMessage(String accountId, Long messageId) throws Exception {
+        Long uid = Long.parseLong(accountId);
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new Exception("Message not found."));
+        if (!msg.getSenderId().equals(uid)) throw new Exception("You can only delete your own messages.");
+
+        msg.setDeleted(true);
+        msg.setBody("");
+        msg.setMediaUrl(null);
+        return toMessageDto(messageRepository.save(msg));
     }
 
     // -------------------------------------------------------------------------
@@ -174,7 +215,7 @@ public class ConversationService {
     }
 
     // -------------------------------------------------------------------------
-    // Delete (soft)
+    // Delete conversation (soft)
     // -------------------------------------------------------------------------
 
     @Transactional
@@ -207,9 +248,9 @@ public class ConversationService {
         int unread = c.getParticipantAId().equals(requesterId) ? c.getUnreadCountA() : c.getUnreadCountB();
 
         User other = accountRepository.findById(otherId).map(a -> (User) a).orElse(null);
-        String displayName = other != null ? other.getDisplayName() : "[deleted]";
+        String displayName   = other != null ? other.getDisplayName()    : "[deleted]";
         String identifierCode = other != null ? other.getIdentifierCode() : null;
-        String profileImg = other != null ? other.getProfileImg() : null;
+        String profileImg    = other != null ? other.getProfileImg()     : null;
 
         return new ConversationDto(
                 c.getId(),
@@ -224,6 +265,27 @@ public class ConversationService {
     }
 
     private MessageDto toMessageDto(Message m) {
+        String replyPreviewBody       = null;
+        String replyPreviewSenderName = null;
+
+        if (m.getReplyToId() != null) {
+            Message reply = messageRepository.findById(m.getReplyToId()).orElse(null);
+            if (reply != null) {
+                if (reply.isDeleted()) {
+                    replyPreviewBody = "";
+                } else if (reply.getBody() != null && !reply.getBody().isBlank()) {
+                    String b = reply.getBody();
+                    replyPreviewBody = b.length() > 60 ? b.substring(0, 57) + "..." : b;
+                } else if (reply.getMediaUrl() != null) {
+                    replyPreviewBody = reply.isVideo() ? "[Video]" : "[Photo]";
+                }
+                Account senderAcc = accountRepository.findById(reply.getSenderId()).orElse(null);
+                if (senderAcc instanceof User u) {
+                    replyPreviewSenderName = u.getDisplayName();
+                }
+            }
+        }
+
         return new MessageDto(
                 m.getId(),
                 m.getConversationId(),
@@ -231,7 +293,12 @@ public class ConversationService {
                 m.getBody(),
                 m.getMediaUrl(),
                 m.isVideo(),
+                m.getReplyToId(),
+                replyPreviewBody,
+                replyPreviewSenderName,
                 m.getSentAt(),
+                m.getEditedAt(),
+                m.isDeleted(),
                 m.getReadAt()
         );
     }
