@@ -65,9 +65,12 @@ public class ConversationService {
     // -------------------------------------------------------------------------
 
     @Transactional
-    public MessageDto sendMessage(String senderAccountId, String recipientAccountId, String body) throws Exception {
-        if (body == null || body.isBlank()) throw new Exception("Message body is required.");
-        if (body.length() > 2000) throw new Exception("Message body may not exceed 2000 characters.");
+    public MessageDto sendMessage(String senderAccountId, String recipientAccountId, String body,
+                                  String mediaUrl, boolean isVideo) throws Exception {
+        boolean hasBody  = body != null && !body.isBlank();
+        boolean hasMedia = mediaUrl != null;
+        if (!hasBody && !hasMedia) throw new Exception("A message must contain text or a media file.");
+        if (hasBody && body.length() > 2000) throw new Exception("Message body may not exceed 2000 characters.");
         if (senderAccountId.equals(recipientAccountId)) throw new Exception("Cannot message yourself.");
 
         Long senderId = Long.parseLong(senderAccountId);
@@ -99,7 +102,8 @@ public class ConversationService {
         conv.setDeletedByA(false);
         conv.setDeletedByB(false);
 
-        String preview = body.length() <= 100 ? body : body.substring(0, 97) + "...";
+        String previewText = hasBody ? body : (isVideo ? "[Video]" : "[Photo]");
+        String preview = previewText.length() <= 100 ? previewText : previewText.substring(0, 97) + "...";
         conv.setLastMessagePreview(preview);
         conv.setLastMessageAt(new Date());
 
@@ -114,7 +118,9 @@ public class ConversationService {
         Message msg = new Message();
         msg.setConversationId(savedConv.getId());
         msg.setSenderId(senderId);
-        msg.setBody(body);
+        msg.setBody(hasBody ? body : "");
+        msg.setMediaUrl(mediaUrl);
+        msg.setVideo(isVideo);
         msg.setSentAt(new Date());
         Message savedMsg = messageRepository.save(msg);
 
@@ -223,6 +229,8 @@ public class ConversationService {
                 m.getConversationId(),
                 m.getSenderId().toString(),
                 m.getBody(),
+                m.getMediaUrl(),
+                m.isVideo(),
                 m.getSentAt(),
                 m.getReadAt()
         );
