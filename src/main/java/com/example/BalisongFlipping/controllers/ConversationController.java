@@ -25,8 +25,8 @@ public class ConversationController {
     private static final long MAX_IMAGE_BYTES = 10L * 1024 * 1024;   // 10 MB
     private static final long MAX_VIDEO_BYTES = 150L * 1024 * 1024; // 150 MB
 
-    @Value("${cloud.aws.s3.bucket}")  private String bucketName;
-    @Value("${cloud.aws.region.static}") private String s3Region;
+    @Value("${cloud.aws.s3.bucket}") private String bucketName;
+    @Value("${aws.s3.region}")       private String s3Region;
 
     @Autowired private ConversationService conversationService;
     @Autowired private AccountService accountService;
