@@ -20,6 +20,12 @@ public class Message {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String body;
 
+    @Column(name = "media_url", length = 512)
+    private String mediaUrl;
+
+    @Column(name = "is_video", nullable = false)
+    private boolean isVideo = false;
+
     @Column(name = "sent_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date sentAt;
@@ -37,6 +43,10 @@ public class Message {
     public void setSenderId(Long senderId) { this.senderId = senderId; }
     public String getBody() { return body; }
     public void setBody(String body) { this.body = body; }
+    public String getMediaUrl() { return mediaUrl; }
+    public void setMediaUrl(String mediaUrl) { this.mediaUrl = mediaUrl; }
+    public boolean isVideo() { return isVideo; }
+    public void setVideo(boolean isVideo) { this.isVideo = isVideo; }
     public Date getSentAt() { return sentAt; }
     public void setSentAt(Date sentAt) { this.sentAt = sentAt; }
     public Date getReadAt() { return readAt; }

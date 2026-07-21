@@ -7,6 +7,8 @@ public record MessageDto(
         Long conversationId,
         String senderId,
         String body,
+        String mediaUrl,
+        boolean isVideo,
         Date sentAt,
         Date readAt
 ) {}
