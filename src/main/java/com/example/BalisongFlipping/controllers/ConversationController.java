@@ -65,8 +65,9 @@ public class ConversationController {
     @PostMapping(value = "/{recipientId}/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendMessage(
             @PathVariable("recipientId") String recipientId,
-            @RequestParam(value = "body", required = false) String body,
-            @RequestParam(value = "mediaFile", required = false) MultipartFile mediaFile
+            @RequestParam(value = "body",       required = false) String body,
+            @RequestParam(value = "mediaFile",  required = false) MultipartFile mediaFile,
+            @RequestParam(value = "replyToId",  required = false) Long replyToId
     ) {
         try {
             String accountId = accountService.getSelf().id();
@@ -94,11 +95,38 @@ public class ConversationController {
             }
 
             return new ResponseEntity<>(
-                    conversationService.sendMessage(accountId, recipientId, body, mediaUrl, isVideo),
+                    conversationService.sendMessage(accountId, recipientId, body, mediaUrl, isVideo, replyToId),
                     HttpStatus.CREATED
             );
         } catch (Exception e) {
             log.error("POST /conversations/{}/messages -> {}", recipientId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // Edit own message body
+    @PatchMapping("/messages/{msgId}")
+    public ResponseEntity<?> editMessage(
+            @PathVariable("msgId") Long msgId,
+            @RequestBody Map<String, String> payload
+    ) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return ResponseEntity.ok(conversationService.editMessage(accountId, msgId, payload.get("body")));
+        } catch (Exception e) {
+            log.error("PATCH /conversations/messages/{} -> {}", msgId, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // Soft-delete own message
+    @DeleteMapping("/messages/{msgId}")
+    public ResponseEntity<?> deleteMessage(@PathVariable("msgId") Long msgId) {
+        try {
+            String accountId = accountService.getSelf().id();
+            return ResponseEntity.ok(conversationService.deleteMessage(accountId, msgId));
+        } catch (Exception e) {
+            log.error("DELETE /conversations/messages/{} -> {}", msgId, e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
