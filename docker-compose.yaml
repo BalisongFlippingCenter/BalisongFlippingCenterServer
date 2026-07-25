@@ -10,8 +10,8 @@ services:
       - data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=balisong_db
-      - POSTGRES_USER=balisong_user
-      - POSTGRES_PASSWORD=balisong_pass
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U balisong_user -d balisong_db"]
       interval: 10s
@@ -36,6 +36,8 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
