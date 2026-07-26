@@ -1,5 +1,6 @@
 package com.example.BalisongFlipping.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,9 @@ import java.util.List;
 public class SecurityFilterConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthFilter jwtAuthenticationFilter;
+
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     public SecurityFilterConfig(
             JwtAuthFilter jwtAuthenticationFilter,
@@ -65,7 +69,7 @@ public class SecurityFilterConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5157", "http://ec2-23-22-127-77.compute-1.amazonaws.com/"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowCredentials(true);
         configuration.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type", "Origin", "Accept"));
