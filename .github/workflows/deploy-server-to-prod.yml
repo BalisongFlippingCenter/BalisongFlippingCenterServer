@@ -14,7 +14,6 @@ jobs:
   deploy:
     name: Build, Push, and Deploy
     runs-on: ubuntu-latest
-    environment: Deployment
 
     steps:
       - name: Checkout
