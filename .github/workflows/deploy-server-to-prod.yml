@@ -67,3 +67,16 @@ jobs:
 
           echo "Deploy status: $STATUS"
           [ "$STATUS" = "Success" ]
+
+      - name: Verify deployment
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS https://balisongflippingcenter.com/api/actuator/health; then
+              echo "Backend healthy"
+              exit 0
+            fi
+            echo "Not healthy yet, retrying in 5s..."
+            sleep 5
+          done
+          echo "Backend health check failed after deploy"
+          exit 1
