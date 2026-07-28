@@ -51,13 +51,13 @@ jobs:
             docker-compose pull server
             docker-compose up -d --no-deps --force-recreate server
 
-            for i in $(seq 1 10); do
+            for i in $(seq 1 30); do
               if curl -fsS http://localhost:8080/api/actuator/health; then
                 echo "Backend healthy"
                 exit 0
               fi
-              echo "Not healthy yet, retrying in 5s..."
-              sleep 5
+              echo "Not healthy yet, retrying in 10s..."
+              sleep 10
             done
             echo "Backend health check failed after deploy"
             exit 1
