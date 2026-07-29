@@ -1,7 +1,10 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.dtos.postsDtos.CreatePostRequestDto;
 import com.example.BalisongFlipping.dtos.postsDtos.PostResponseDto;
+import com.example.BalisongFlipping.dtos.postsDtos.PostUploadUrlRequestDto;
 import com.example.BalisongFlipping.dtos.postsDtos.UpdatePostDto;
+import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.modals.posts.PostWrapper;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.PostService;
@@ -10,11 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @RequestMapping("/posts")
@@ -79,53 +81,42 @@ public class PostController {
     }
 
     // -------------------------------------------------------------------------
+    // Request presigned S3 upload URLs for post media
+    // Client PUTs each file directly to S3, then calls /posts/create with the
+    // resulting URLs instead of raw files.
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/upload-url")
+    public ResponseEntity<?> getUploadUrls(@RequestBody PostUploadUrlRequestDto dto) {
+        try {
+            String accountId = accountService.getSelf().id();
+            List<PresignedUploadTargetDto> targets = postService.generateUploadUrls(accountId, dto);
+            return new ResponseEntity<>(targets, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /posts/upload-url -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Create post
     // All logic is handled in PostService based on postType.
-    // Required for all types:  postType, caption, mediaFiles
+    // Media must already be uploaded to S3 via /posts/upload-url — this only
+    // persists metadata referencing those URLs.
+    // Required for all types:  postType, caption, media
     // Type-specific optionals: description, referenceKnifeId, mode,
     //                          offeringKnifeId, lookingForText,
     //                          tags, difficultyTag, techniqueTags
     // -------------------------------------------------------------------------
 
-    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> createPost(
-            @RequestParam("postType") String postType,
-            @RequestParam("caption") String caption,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "referenceKnifeId", required = false) String referenceKnifeId,
-            @RequestParam(value = "fileMetadata", required = false) String fileMetadata,
-            @RequestParam(value = "mediaFiles", required = false) MultipartFile[] mediaFiles,
-            @RequestParam(value = "mode", required = false) String mode,
-            @RequestParam(value = "offeringKnifeId", required = false) String offeringKnifeId,
-            @RequestParam(value = "price", required = false) String price,
-            @RequestParam(value = "lookingForText", required = false) String lookingForText,
-            @RequestParam(value = "tags", required = false) String[] tags,
-            @RequestParam(value = "difficultyTag", required = false) String difficultyTag,
-            @RequestParam(value = "techniqueTags", required = false) String[] techniqueTags
-    ) {
+    @PostMapping("/create")
+    public ResponseEntity<?> createPost(@RequestBody CreatePostRequestDto dto) {
         try {
             String accountId = accountService.getSelf().id();
-
-            PostWrapper post = postService.createPost(
-                    accountId,
-                    postType,
-                    caption,
-                    description,
-                    referenceKnifeId,
-                    fileMetadata,
-                    mediaFiles,
-                    mode,
-                    offeringKnifeId,
-                    price,
-                    lookingForText,
-                    tags,
-                    difficultyTag,
-                    techniqueTags
-            );
-
+            PostWrapper post = postService.createPost(accountId, dto);
             return new ResponseEntity<>(post, HttpStatus.CREATED);
         } catch (Exception e) {
-            log.error("POST /posts/create [{}] -> {}", postType, e.getMessage());
+            log.error("POST /posts/create [{}] -> {}", dto.postType(), e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }

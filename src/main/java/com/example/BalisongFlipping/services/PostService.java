@@ -1,8 +1,13 @@
 package com.example.BalisongFlipping.services;
 
 import com.example.BalisongFlipping.dtos.postsDtos.CollectionTimelineDto;
+import com.example.BalisongFlipping.dtos.postsDtos.CreatePostRequestDto;
 import com.example.BalisongFlipping.dtos.postsDtos.FileMetadataItem;
+import com.example.BalisongFlipping.dtos.postsDtos.PostMediaInputDto;
+import com.example.BalisongFlipping.dtos.postsDtos.PostUploadUrlRequestDto;
 import com.example.BalisongFlipping.dtos.postsDtos.UpdatePostDto;
+import com.example.BalisongFlipping.dtos.uploadsDtos.FileUploadRequestItem;
+import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.enums.notifications.NotificationType;
 import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.dtos.postsDtos.PostAuthorDto;
@@ -38,9 +43,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -51,8 +56,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class PostService {
-
-    private record UploadedFile(String key, String url, boolean isVideo) {}
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -348,42 +351,51 @@ public class PostService {
     }
 
     // -------------------------------------------------------------------------
+    // Presigned upload URLs — client PUTs files directly to S3
+    // -------------------------------------------------------------------------
+
+    public List<PresignedUploadTargetDto> generateUploadUrls(String accountId, PostUploadUrlRequestDto dto) throws Exception {
+        if (dto.postType() == null || dto.postType().isBlank()) throw new Exception("postType is required.");
+        if (dto.files() == null || dto.files().isEmpty()) throw new Exception("At least one file is required.");
+        if (dto.files().size() > 10) throw new Exception("Cannot request more than 10 upload URLs at once.");
+
+        String postUuid = UUID.randomUUID().toString();
+        List<PresignedUploadTargetDto> targets = new ArrayList<>();
+        for (FileUploadRequestItem file : dto.files()) {
+            String filename = (file.filename() != null && !file.filename().isBlank())
+                    ? file.filename()
+                    : UUID.randomUUID().toString();
+            String key = "posts/" + accountId + "/" + dto.postType().toLowerCase() + "/" + postUuid + "/" + filename;
+            String uploadUrl = s3Service.generatePresignedUploadUrl(bucketName, key, file.contentType(), Duration.ofMinutes(10));
+            String publicUrl = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+            boolean isVideo = file.contentType() != null && file.contentType().startsWith("video/");
+            targets.add(new PresignedUploadTargetDto(key, uploadUrl, publicUrl, isVideo));
+        }
+        return targets;
+    }
+
+    // -------------------------------------------------------------------------
     // Create post — unified entry point branching by postType
     // -------------------------------------------------------------------------
 
-    public PostWrapper createPost(
-            String accountId,
-            String postType,
-            String caption,
-            String description,
-            String referenceKnifeId,
-            String fileMetadata,
-            MultipartFile[] mediaFiles,
-            String mode,
-            String offeringKnifeId,
-            String price,
-            String lookingForText,
-            String[] tags,
-            String difficultyTag,
-            String[] techniqueTags
-    ) throws Exception {
-        if (postType == null || postType.isBlank()) {
+    public PostWrapper createPost(String accountId, CreatePostRequestDto dto) throws Exception {
+        if (dto.postType() == null || dto.postType().isBlank()) {
             throw new Exception("postType is required.");
         }
         PostWrapper created;
-        switch (postType.toUpperCase().trim()) {
+        switch (dto.postType().toUpperCase().trim()) {
             case "GENERIC":
-                created = createGenericPost(accountId, caption, fileMetadata, mediaFiles, tags); break;
+                created = createGenericPost(accountId, dto.caption(), dto.media(), dto.tags()); break;
             case "BUY_SELL":
-                created = createBuySellPost(accountId, caption, description, fileMetadata, mediaFiles, mode, offeringKnifeId, price); break;
+                created = createBuySellPost(accountId, dto.caption(), dto.description(), dto.media(), dto.mode(), dto.offeringKnifeId(), dto.price()); break;
             case "TRADE":
-                created = createTradePost(accountId, caption, description, referenceKnifeId, mediaFiles, offeringKnifeId, lookingForText); break;
+                created = createTradePost(accountId, dto.caption(), dto.description(), dto.referenceKnifeId(), dto.media(), dto.offeringKnifeId(), dto.lookingForText()); break;
             case "TRICK_TUTORIAL":
-                created = createTrickTutorialPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags); break;
+                created = createTrickTutorialPost(accountId, dto.caption(), dto.description(), dto.referenceKnifeId(), dto.media(), dto.difficultyTag(), dto.techniqueTags()); break;
             case "COMBO":
-                created = createComboPost(accountId, caption, description, referenceKnifeId, mediaFiles, difficultyTag, techniqueTags); break;
+                created = createComboPost(accountId, dto.caption(), dto.description(), dto.referenceKnifeId(), dto.media(), dto.difficultyTag(), dto.techniqueTags()); break;
             default:
-                throw new Exception("Unknown postType: " + postType);
+                throw new Exception("Unknown postType: " + dto.postType());
         }
         accountService.incrementPostCount(accountId);
         return created;
@@ -397,30 +409,10 @@ public class PostService {
     private PostWrapper createGenericPost(
             String accountId,
             String caption,
-            String fileMetadata,
-            MultipartFile[] mediaFiles,
-            String[] tags
+            List<PostMediaInputDto> mediaInput,
+            List<String> tags
     ) throws Exception {
-        if (mediaFiles == null || mediaFiles.length == 0) throw new Exception("At least one media file is required.");
-        if (mediaFiles.length > 10) throw new Exception("Generic posts may not exceed 10 media files.");
-
-        List<FileMetadataItem> metaList = parseFileMetadata(fileMetadata, mediaFiles.length);
-        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "GENERIC", mediaFiles);
-
-        List<PostMedia> media = new ArrayList<>();
-        for (int i = 0; i < uploads.size(); i++) {
-            UploadedFile upload = uploads.get(i);
-            PostMedia pm = new PostMedia(upload.url(), upload.isVideo());
-            FileMetadataItem meta = metaList.get(i);
-            if (meta != null) {
-                if (meta.description() != null) pm.setDescription(meta.description());
-                if (meta.referenceKnifeId() != null && !meta.referenceKnifeId().isBlank()) {
-                    try { pm.setReferenceKnifeId(Long.parseLong(meta.referenceKnifeId())); }
-                    catch (NumberFormatException ignored) {}
-                }
-            }
-            media.add(pm);
-        }
+        List<PostMedia> media = resolveMediaList(accountId, mediaInput, "GENERIC", 1, 10);
 
         List<GenericPostTag> parsedTags = new ArrayList<>();
         if (tags != null) {
@@ -442,13 +434,9 @@ public class PostService {
         PostWrapper saved = postsRepository.save(post);
 
         // Add uploaded files to referenced knife galleries
-        for (int i = 0; i < uploads.size(); i++) {
-            FileMetadataItem meta = metaList.get(i);
-            if (meta == null || meta.referenceKnifeId() == null || meta.referenceKnifeId().isBlank()) continue;
-            try {
-                Long knifeId = Long.parseLong(meta.referenceKnifeId());
-                addFilesToKnifeGallery(accountId, knifeId, List.of(uploads.get(i).url()), saved.getId().toString());
-            } catch (NumberFormatException ignored) {}
+        for (PostMedia pm : media) {
+            if (pm.getReferenceKnifeId() == null) continue;
+            addFilesToKnifeGallery(accountId, pm.getReferenceKnifeId(), List.of(pm.getUrl()), saved.getId().toString());
         }
 
         return saved;
@@ -462,8 +450,7 @@ public class PostService {
             String accountId,
             String caption,
             String description,
-            String fileMetadata,
-            MultipartFile[] mediaFiles,
+            List<PostMediaInputDto> mediaInput,
             String mode,
             String offeringKnifeId,
             String price
@@ -481,15 +468,11 @@ public class PostService {
         List<PostMedia> media;
 
         if (parsedMode == BuySellMode.BUYING) {
-            // Buying: exactly 1 image (no videos), flat description only
-            if (mediaFiles == null || mediaFiles.length != 1) {
-                throw new Exception("Buying posts require exactly 1 image.");
-            }
-            MultipartFile file = mediaFiles[0];
-            if (file.getContentType() != null && file.getContentType().startsWith("video/")) {
+            // Buying: exactly 1 image (no videos)
+            media = resolveMediaList(accountId, mediaInput, "BUY_SELL", 1, 1);
+            if (media.get(0).isVideo()) {
                 throw new Exception("Buying posts require an image, not a video.");
             }
-            media = uploadMediaFiles(accountId, "BUY_SELL", mediaFiles);
         } else {
             // Selling: offeringKnifeId required, validate ownership, up to 10 media, per-file descriptions
             if (offeringKnifeId == null || offeringKnifeId.isBlank()) {
@@ -498,21 +481,7 @@ public class PostService {
             Long knifeIdLong = Long.parseLong(offeringKnifeId);
             validateKnifeOwnership(accountId, knifeIdLong);
 
-            if (mediaFiles == null || mediaFiles.length == 0) throw new Exception("At least one media file is required when selling.");
-            if (mediaFiles.length > 10) throw new Exception("Selling posts may not exceed 10 media files.");
-
-            List<FileMetadataItem> metaList = parseFileMetadata(fileMetadata, mediaFiles.length);
-            List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "BUY_SELL", mediaFiles);
-            media = new ArrayList<>();
-            for (int i = 0; i < uploads.size(); i++) {
-                UploadedFile upload = uploads.get(i);
-                PostMedia pm = new PostMedia(upload.url(), upload.isVideo());
-                FileMetadataItem meta = metaList.get(i);
-                if (meta != null && meta.description() != null) {
-                    pm.setDescription(meta.description());
-                }
-                media.add(pm);
-            }
+            media = resolveMediaList(accountId, mediaInput, "BUY_SELL", 1, 10);
         }
 
         BuySellPost post = new BuySellPost();
@@ -544,7 +513,7 @@ public class PostService {
             String caption,
             String description,
             String referenceKnifeId,
-            MultipartFile[] mediaFiles,
+            List<PostMediaInputDto> mediaInput,
             String offeringKnifeId,
             String lookingForText
     ) throws Exception {
@@ -556,15 +525,10 @@ public class PostService {
         validateKnifeOwnership(accountId, knifeIdLong);
 
         // Exactly 1 non-video file for the "looking for" photo
-        if (mediaFiles == null || mediaFiles.length != 1) {
-            throw new Exception("Trade posts require exactly 1 media file (the looking-for photo).");
-        }
-        MultipartFile file = mediaFiles[0];
-        if (file.getContentType() != null && file.getContentType().startsWith("video/")) {
+        List<PostMedia> media = resolveMediaList(accountId, mediaInput, "TRADE", 1, 1);
+        if (media.get(0).isVideo()) {
             throw new Exception("Trade posts require an image for the looking-for photo, not a video.");
         }
-
-        List<PostMedia> media = uploadMediaFiles(accountId, "TRADE", mediaFiles);
 
         TradePost post = new TradePost();
         populateBase(post, accountId, caption, description, referenceKnifeId, media);
@@ -582,9 +546,9 @@ public class PostService {
             String caption,
             String description,
             String referenceKnifeId,
-            MultipartFile[] mediaFiles,
+            List<PostMediaInputDto> mediaInput,
             String difficultyTag,
-            String[] techniqueTags
+            List<String> techniqueTags
     ) throws Exception {
         if (caption == null || caption.isBlank()) throw new Exception("caption (trick name) is required.");
         if (difficultyTag == null || difficultyTag.isBlank()) throw new Exception("difficultyTag is required for trick tutorial posts.");
@@ -597,18 +561,12 @@ public class PostService {
         }
 
         // Exactly 1 video file
-        if (mediaFiles == null || mediaFiles.length != 1) {
-            throw new Exception("Trick tutorial posts require exactly 1 video file.");
-        }
-        MultipartFile file = mediaFiles[0];
-        if (file.getContentType() == null || !file.getContentType().startsWith("video/")) {
+        List<PostMedia> media = resolveMediaList(accountId, mediaInput, "TRICK_TUTORIAL", 1, 1);
+        if (!media.get(0).isVideo()) {
             throw new Exception("Trick tutorial posts require a video file.");
         }
 
         List<TechniqueTag> parsedTechniqueTags = parseTechniqueTags(techniqueTags, 2);
-
-        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "TRICK_TUTORIAL", mediaFiles);
-        List<PostMedia> media = uploads.stream().map(u -> new PostMedia(u.url(), u.isVideo())).toList();
 
         TrickTutorialPost post = new TrickTutorialPost();
         populateBase(post, accountId, caption, description, referenceKnifeId, media);
@@ -617,10 +575,8 @@ public class PostService {
         PostWrapper saved = postsRepository.save(post);
 
         if (referenceKnifeId != null && !referenceKnifeId.isBlank()) {
-            try {
-                addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
-                        List.of(uploads.get(0).url()), saved.getId().toString());
-            } catch (NumberFormatException ignored) {}
+            addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
+                    List.of(media.get(0).getUrl()), saved.getId().toString());
         }
 
         return saved;
@@ -635,9 +591,9 @@ public class PostService {
             String caption,
             String description,
             String referenceKnifeId,
-            MultipartFile[] mediaFiles,
+            List<PostMediaInputDto> mediaInput,
             String difficultyTag,
-            String[] techniqueTags
+            List<String> techniqueTags
     ) throws Exception {
         if (difficultyTag == null || difficultyTag.isBlank()) throw new Exception("difficultyTag is required for combo posts.");
 
@@ -649,18 +605,12 @@ public class PostService {
         }
 
         // Exactly 1 video file
-        if (mediaFiles == null || mediaFiles.length != 1) {
-            throw new Exception("Combo posts require exactly 1 video file.");
-        }
-        MultipartFile file = mediaFiles[0];
-        if (file.getContentType() == null || !file.getContentType().startsWith("video/")) {
+        List<PostMedia> media = resolveMediaList(accountId, mediaInput, "COMBO", 1, 1);
+        if (!media.get(0).isVideo()) {
             throw new Exception("Combo posts require a video file.");
         }
 
         List<TechniqueTag> parsedTechniqueTags = parseTechniqueTags(techniqueTags, 5);
-
-        List<UploadedFile> uploads = uploadMediaFilesWithKeys(accountId, "COMBO", mediaFiles);
-        List<PostMedia> media = uploads.stream().map(u -> new PostMedia(u.url(), u.isVideo())).toList();
 
         ComboPost post = new ComboPost();
         populateBase(post, accountId, caption, description, referenceKnifeId, media);
@@ -669,10 +619,8 @@ public class PostService {
         PostWrapper saved = postsRepository.save(post);
 
         if (referenceKnifeId != null && !referenceKnifeId.isBlank()) {
-            try {
-                addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
-                        List.of(uploads.get(0).url()), saved.getId().toString());
-            } catch (NumberFormatException ignored) {}
+            addFilesToKnifeGallery(accountId, Long.parseLong(referenceKnifeId),
+                    List.of(media.get(0).getUrl()), saved.getId().toString());
         }
 
         return saved;
@@ -824,32 +772,48 @@ public class PostService {
         }
     }
 
-    private List<UploadedFile> uploadMediaFilesWithKeys(String accountId, String postType, MultipartFile[] files) throws Exception {
-        List<UploadedFile> result = new ArrayList<>();
-        String postUuid = UUID.randomUUID().toString();
+    // -------------------------------------------------------------------------
+    // Resolve client-supplied media URLs (already uploaded to S3 via
+    // /posts/upload-url) into PostMedia, verifying ownership and existence.
+    // -------------------------------------------------------------------------
 
-        for (MultipartFile file : files) {
-            String filename = file.getOriginalFilename() != null
-                    ? file.getOriginalFilename()
-                    : UUID.randomUUID().toString();
-            String key = "posts/" + accountId + "/" + postType.toLowerCase() + "/" + postUuid + "/" + filename;
+    private static final List<String> VIDEO_EXTENSIONS = List.of(".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv");
 
-            s3Service.uploadFile(bucketName, key, file.getSize(), file.getContentType(), file.getInputStream());
+    private List<PostMedia> resolveMediaList(
+            String accountId,
+            List<PostMediaInputDto> mediaInput,
+            String postType,
+            int minCount,
+            int maxCount
+    ) throws Exception {
+        List<PostMediaInputDto> input = mediaInput != null ? mediaInput : List.of();
+        if (input.size() < minCount) throw new Exception(postType + " posts require at least " + minCount + " media file(s).");
+        if (input.size() > maxCount) throw new Exception(postType + " posts may not exceed " + maxCount + " media files.");
 
-            String url = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
-            boolean isVideo = file.getContentType() != null && file.getContentType().startsWith("video/");
-            result.add(new UploadedFile(key, url, isVideo));
+        List<PostMedia> result = new ArrayList<>();
+        for (PostMediaInputDto item : input) {
+            String key = validateOwnedUploadedKey(accountId, item.url());
+            boolean isVideo = VIDEO_EXTENSIONS.stream().anyMatch(key.toLowerCase()::endsWith);
+
+            PostMedia pm = new PostMedia(item.url(), isVideo);
+            if (item.description() != null && !item.description().isBlank()) pm.setDescription(item.description());
+            if (item.referenceKnifeId() != null && !item.referenceKnifeId().isBlank()) {
+                try { pm.setReferenceKnifeId(Long.parseLong(item.referenceKnifeId())); }
+                catch (NumberFormatException ignored) {}
+            }
+            result.add(pm);
         }
-
         return result;
     }
 
-    private List<PostMedia> uploadMediaFiles(String accountId, String postType, MultipartFile[] files) throws Exception {
-        List<PostMedia> mediaList = new ArrayList<>();
-        for (UploadedFile u : uploadMediaFilesWithKeys(accountId, postType, files)) {
-            mediaList.add(new PostMedia(u.url(), u.isVideo()));
-        }
-        return mediaList;
+    private String validateOwnedUploadedKey(String accountId, String url) throws Exception {
+        String prefix = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/";
+        if (url == null || !url.startsWith(prefix)) throw new Exception("Invalid media URL.");
+
+        String key = url.substring(prefix.length());
+        if (!key.startsWith("posts/" + accountId + "/")) throw new Exception("You do not own this uploaded file.");
+        if (!s3Service.doesObjectExist(bucketName, key)) throw new Exception("Uploaded file not found — it may have failed to upload.");
+        return key;
     }
 
     private List<FileMetadataItem> parseFileMetadata(String fileMetadata, int expectedCount) throws Exception {
@@ -885,10 +849,10 @@ public class PostService {
         catch (IllegalArgumentException e) { throw new Exception("Invalid " + cls.getSimpleName() + ": " + value); }
     }
 
-    private List<TechniqueTag> parseTechniqueTags(String[] techniqueTags, int maxCount) throws Exception {
+    private List<TechniqueTag> parseTechniqueTags(List<String> techniqueTags, int maxCount) throws Exception {
         List<TechniqueTag> result = new ArrayList<>();
         if (techniqueTags == null) return result;
-        if (techniqueTags.length > maxCount) {
+        if (techniqueTags.size() > maxCount) {
             throw new Exception("Maximum of " + maxCount + " technique tags allowed.");
         }
         for (String tag : techniqueTags) {

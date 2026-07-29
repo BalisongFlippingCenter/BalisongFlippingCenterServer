@@ -19,7 +19,7 @@ Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack co
 | Database | PostgreSQL 16 (containerized via Docker) |
 | Schema migrations | Flyway (V1–V17) |
 | Auth | JWT (`jjwt` 0.11.5) + refresh tokens (7-day expiry) |
-| File storage | AWS S3 (SDK v1, fully wired) |
+| File storage | AWS S3 (SDK v2 — `S3Client` + `S3Presigner`, fully wired) |
 | Email | Spring Mail (JavaMailSender, fully wired) |
 | WebSocket | Spring WebSocket + STOMP (fully wired) |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
@@ -96,7 +96,8 @@ Public (`/posts/any/**`):
 Auth-required:
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/posts/create` | Multipart — all post types |
+| POST | `/posts/upload-url` | JSON — request presigned S3 PUT URLs for post media (`postType`, `files[]`) |
+| POST | `/posts/create` | JSON (`CreatePostRequestDto`) — media is a list of already-uploaded `{url, description, referenceKnifeId}`, not raw files |
 | GET | `/posts/me/liked` | Paginated liked posts |
 | PATCH | `/posts/{id}` | Edit post (`UpdatePostDto`) |
 | DELETE | `/posts/{id}` | Delete post |
@@ -145,6 +146,18 @@ All knife attributes: bladeStyle, bladeMaterial, bladeFinish, handleMaterial, ha
 
 ---
 
+## Media Upload Flow (direct-to-S3)
+
+Post media (`/posts/create`) and new-knife gallery media (`/collection/me/add-knife`) upload **directly from the browser to S3** — the backend is never in the byte path for these. Single-image fields (profile img, banner img, collection banner, knife cover photo) still upload through the backend the old way (small enough not to matter).
+
+1. Client calls `POST /posts/upload-url` (or `POST /collection/me/knife-gallery-upload-url`) with `{filename, contentType}` per file. Backend returns a presigned S3 `PUT` URL (`S3Presigner`, 10-min expiry) + the final public URL per file, using the same key-namespacing scheme as before (`posts/{accountId}/{postType}/{uuid}/{filename}`, `collection-knives/{collectionId}/{safeDisplayName}/gallery/{filename}`).
+2. Client `PUT`s each file straight to S3 with `Content-Type` matching what was requested (SigV4 signs `Content-Type`, so a mismatch fails the signature).
+3. Client calls `/posts/create` or `/collection/me/add-knife` with the resulting URLs instead of raw files.
+4. Backend validates every URL before persisting: the S3 key must be under the caller's own `accountId`/`collectionId` prefix (`PostService.validateOwnedUploadedKey`, inline in `CollectionController`), and a `HeadObject` check (`S3Service.doesObjectExist`) confirms the upload actually landed. `isVideo` is derived server-side from the URL's file extension, not trusted from the client.
+5. Orphaned S3 objects (uploaded via step 2, post/knife never created) are not cleaned up — accepted as a low storage cost for now.
+
+S3 bucket CORS (`PUT` from the frontend origins) is required for step 2 and lives in the `BalisongFlippingCenterTerraformProd` repo (`s3.tf`, `aws_s3_bucket_cors_configuration.app_uploads`) — apply it there, not from this repo.
+
 ## Data Model Notes
 - **Posts**: SINGLE_TABLE inheritance — `PostWrapper` base, subtypes `GenericPost`, `BuySellPost`, `TradePost`, `TrickTutorialPost`, `ComboPost`
 - **Post privacy**: `isPrivate` flag — excluded from public feeds but visible to owner on their own profile
@@ -179,7 +192,6 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 - **Email verification**: entity + service exist but not wired into registration flow
 - **Change email / Change password**: service methods exist but deferred (require email verification)
 - **CI/CD**: image tag hardcoded (`v1.1.2`), no auto-versioning
-- **AWS SDK v1**: deprecation warning on startup — upgrade to SDK v2 eventually
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers, report/flag system — planned, not implemented
 
