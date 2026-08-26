@@ -12,7 +12,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Map;
 
 @Service
 public class AiChatService {
@@ -25,12 +24,13 @@ public class AiChatService {
     @Value("${ai.service.base-url}")
     private String aiServiceBaseUrl;
 
-    public StreamingResponseBody streamChat(String sessionId, String message) {
+    private record PythonChatRequest(String session_id, String message, String access_token, String current_path) {}
+
+    public StreamingResponseBody streamChat(String sessionId, String message, String accessToken, String currentPath) {
         return outputStream -> {
-            String body = objectMapper.writeValueAsString(Map.of(
-                    "session_id", sessionId,
-                    "message", message
-            ));
+            String body = objectMapper.writeValueAsString(
+                    new PythonChatRequest(sessionId, message, accessToken, currentPath)
+            );
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(aiServiceBaseUrl + "/chat/stream"))

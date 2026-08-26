@@ -1,6 +1,7 @@
 package com.example.BalisongFlipping.controllers;
 
 import com.example.BalisongFlipping.dtos.AiChatRequestDto;
+import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.AiChatService;
 import com.example.BalisongFlipping.services.AiClientAuthService;
 import com.example.BalisongFlipping.services.AiRateLimiterService;
@@ -30,10 +31,14 @@ public class AiChatController {
     @Autowired
     private AiChatService aiChatService;
 
+    @Autowired
+    private AccountService accountService;
+
     @PostMapping("/chat")
     public ResponseEntity<StreamingResponseBody> chat(
             @RequestHeader("X-Client-Id") String clientId,
             @RequestHeader("X-Client-Key") String clientKey,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody AiChatRequestDto request
     ) {
         if (!aiClientAuthService.isValid(clientId, clientKey)) {
@@ -44,7 +49,14 @@ public class AiChatController {
             return errorResponse(HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded.");
         }
 
-        StreamingResponseBody body = aiChatService.streamChat(request.sessionId(), request.message());
+        String accessToken = null;
+        try {
+            accountService.getSelf();
+            accessToken = authorization;
+        } catch (Exception ignored) {
+        }
+
+        StreamingResponseBody body = aiChatService.streamChat(request.sessionId(), request.message(), accessToken, request.currentPath());
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(body);
     }
 
