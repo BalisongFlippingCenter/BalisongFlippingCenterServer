@@ -40,6 +40,10 @@ services:
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - AI_SERVICE_BASE_URL=${AI_SERVICE_BASE_URL}
+      - AI_CLIENT_KEY_WEBSITE=${AI_CLIENT_KEY_WEBSITE}
+      - AI_CLIENT_KEY_DISCORD=${AI_CLIENT_KEY_DISCORD}
+      - AI_RATE_LIMIT_PER_MINUTE=${AI_RATE_LIMIT_PER_MINUTE}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
       interval: 30s
