@@ -3,9 +3,10 @@
 ## Project Overview
 Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack community platform for balisong knife enthusiasts. Paired with a React/TypeScript frontend (`BalisongFlippingCenterWeb`). Both repos live under the [BalisongFlippingCenter](https://github.com/BalisongFlippingCenter) GitHub org.
 
-- **Live frontend**: http://ec2-23-22-127-77.compute-1.amazonaws.com/
+- **Live frontend (production)**: https://www.balisongflippingcenter.com — served via CloudFront + S3, not an EC2 instance
+- **Staging frontend**: http://ec2-23-22-127-77.compute-1.amazonaws.com/ — standalone nginx container on its own EC2 instance, unrelated to the CloudFront/S3 production path, but points at the same production backend/DB (see below)
 - **EC2 region**: us-east-1
-- **ECR account**: 343218221384 → `balisongflippingcenter/backend/main`
+- **ECR account**: 343218221384 → `balisongflippingcenter/backend/prod`
 
 ---
 
@@ -19,7 +20,7 @@ Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack co
 | Database | PostgreSQL 16 (containerized via Docker) |
 | Schema migrations | Flyway (V1–V17) |
 | Auth | JWT (`jjwt` 0.11.5) + refresh tokens (7-day expiry) |
-| File storage | AWS S3 (SDK v1, fully wired) |
+| File storage | AWS S3 (SDK v2 — `S3Client` + `S3Presigner`, fully wired) |
 | Email | Spring Mail (JavaMailSender, fully wired) |
 | WebSocket | Spring WebSocket + STOMP (fully wired) |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
@@ -96,7 +97,8 @@ Public (`/posts/any/**`):
 Auth-required:
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/posts/create` | Multipart — all post types |
+| POST | `/posts/upload-url` | JSON — request presigned S3 PUT URLs for post media (`postType`, `files[]`) |
+| POST | `/posts/create` | JSON (`CreatePostRequestDto`) — media is a list of already-uploaded `{url, description, referenceKnifeId}`, not raw files |
 | GET | `/posts/me/liked` | Paginated liked posts |
 | PATCH | `/posts/{id}` | Edit post (`UpdatePostDto`) |
 | DELETE | `/posts/{id}` | Delete post |
@@ -145,6 +147,18 @@ All knife attributes: bladeStyle, bladeMaterial, bladeFinish, handleMaterial, ha
 
 ---
 
+## Media Upload Flow (direct-to-S3)
+
+Post media (`/posts/create`) and new-knife gallery media (`/collection/me/add-knife`) upload **directly from the browser to S3** — the backend is never in the byte path for these. Single-image fields (profile img, banner img, collection banner, knife cover photo) still upload through the backend the old way (small enough not to matter).
+
+1. Client calls `POST /posts/upload-url` (or `POST /collection/me/knife-gallery-upload-url`) with `{filename, contentType}` per file. Backend returns a presigned S3 `PUT` URL (`S3Presigner`, 10-min expiry) + the final public URL per file, using the same key-namespacing scheme as before (`posts/{accountId}/{postType}/{uuid}/{filename}`, `collection-knives/{collectionId}/{safeDisplayName}/gallery/{filename}`).
+2. Client `PUT`s each file straight to S3 with `Content-Type` matching what was requested (SigV4 signs `Content-Type`, so a mismatch fails the signature).
+3. Client calls `/posts/create` or `/collection/me/add-knife` with the resulting URLs instead of raw files.
+4. Backend validates every URL before persisting: the S3 key must be under the caller's own `accountId`/`collectionId` prefix (`PostService.validateOwnedUploadedKey`, inline in `CollectionController`), and a `HeadObject` check (`S3Service.doesObjectExist`) confirms the upload actually landed. `isVideo` is derived server-side from the URL's file extension, not trusted from the client.
+5. Orphaned S3 objects (uploaded via step 2, post/knife never created) are not cleaned up — accepted as a low storage cost for now.
+
+S3 bucket CORS (`PUT` from the frontend origins) is required for step 2 and lives in the `BalisongFlippingCenterTerraformProd` repo (`s3.tf`, `aws_s3_bucket_cors_configuration.app_uploads`) — apply it there, not from this repo.
+
 ## Data Model Notes
 - **Posts**: SINGLE_TABLE inheritance — `PostWrapper` base, subtypes `GenericPost`, `BuySellPost`, `TradePost`, `TrickTutorialPost`, `ComboPost`
 - **Post privacy**: `isPrivate` flag — excluded from public feeds but visible to owner on their own profile
@@ -156,17 +170,23 @@ All knife attributes: bladeStyle, bladeMaterial, bladeFinish, handleMaterial, ha
 
 ## Infrastructure & Deployment
 
-### Docker Compose
+### Docker Compose (local dev)
 - **`postgres`**: `postgres:16-alpine`, port 5432, db=`balisong_db` user=`balisong_user` pass=`balisong_pass`
 - **`server`**: Spring Boot on port 8080, depends on postgres healthy
 
-### CI/CD (GitHub Actions)
-- **Trigger**: push to `master`
-- **Pipeline**: build → push to ECR → SSH into EC2 → pull image → `docker-compose up -d`
-- **Known gap**: image tag hardcoded to `v1.1.2` in workflow
-
 ### DBeaver (local DB GUI)
 `localhost:5432`, db=`balisong_db`, user=`balisong_user`, pass=`balisong_pass`
+
+### Production infrastructure (Terraform-managed, since 2026-08-24)
+IaC lives in a separate repo, `BalisongFlippingCenterTerraformProd` (not cloned locally by default — `gh repo clone BalisongFlippingCenter/BalisongFlippingCenterTerraformProd`). S3 backend for state: `balisong-flipping-center-terraform-state-prod`.
+
+- **Production frontend**: CloudFront (`d2zzr8bab26vq8.cloudfront.net`, aliases `balisongflippingcenter.com` / `www.balisongflippingcenter.com`) serving an S3 bucket (`balisong-flipping-center-frontend-prod`) via OAC. `/api/*` is routed by an `ordered_cache_behavior` to the backend EC2 origin (caching disabled); everything else hits the S3 origin with a CloudFront Function rewriting SPA routes to `index.html`.
+- **Production backend**: EC2 instance `i-0fd15131d9c0681e8` (`100.61.159.104`), created by Terraform's `aws_instance.server` + `aws_eip.server`. Security group restricts port 8080 to CloudFront's managed prefix list only, SSH to a single admin CIDR (`var.ssh_allowed_cidr`).
+  - `user_data` (see `templates/user_data.sh.tpl`) installs Docker/Compose/AWS CLI/SSM agent, pulls all app secrets from SSM Parameter Store (`/balisong/prod/*`) into `.env`, writes `docker-compose.yaml` from a template baked into `user_data`, logs into ECR, and starts the stack — so the instance is fully reproducible from a `terraform apply`, with no hand-maintained config on the box.
+  - Secrets (`DB_PASSWORD`, `JWT_SECRET_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`) are Terraform variables supplied via `TF_VAR_*` env vars at apply time (never written to `terraform.tfvars`), stored as SSM `SecureString`/`String` parameters, and read by the instance role at boot — the app never gets long-lived AWS access keys (S3 access is via the instance's IAM role).
+- **Testing/staging backend**: EC2 instance `i-0638063ca847f2274` (`3.217.173.234`, tagged `balisong-testing-server`) — the *original* manually-created box, kept intentionally outside Terraform as an isolated test environment with its own Postgres, decoupled from real user data. Its security group (`launch-wizard-2`) is still wide open (22/80/8080 to `0.0.0.0/0`) — fine for a personal test box, but tighten if that ever changes.
+- **CI/CD (GitHub Actions, `.github/workflows/deploy-server-to-prod.yml`)**: on push to `master` — build/push image to ECR (`AWS_ECR_REPOSITORY_URL` repo var, tagged with the commit SHA and `latest`) via OIDC (`AWS_BACKEND_DEPLOY_ROLE_ARN`), deploy via `aws ssm send-command` (`docker-compose pull server && up -d --force-recreate server`) against `AWS_EC2_INSTANCE_ID`, then poll `https://balisongflippingcenter.com/api/actuator/health` for up to 5 minutes to verify.
+  - `AWS_EC2_INSTANCE_ID` must always match whichever instance ID Terraform currently outputs for `aws_instance.server` (`terraform output ec2_instance_id`) — it does **not** update itself. A 2026-08-24 incident traced back to this variable silently pointing at a Terraform instance that had been replaced (likely by the AMI-forced-replacement scenario noted in `ec2.tf`) and never updated, so deploys had been SSM-targeting a nonexistent instance while a manually-created replacement (now `balisong-testing-server`) served real production traffic with hand-edited, buggy config. Always cross-check this variable against `terraform output` after any `apply` that touches `aws_instance.server`.
 
 ---
 
@@ -178,8 +198,7 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ## Known Gaps / To Do
 - **Email verification**: entity + service exist but not wired into registration flow
 - **Change email / Change password**: service methods exist but deferred (require email verification)
-- **CI/CD**: image tag hardcoded (`v1.1.2`), no auto-versioning
-- **AWS SDK v1**: deprecation warning on startup — upgrade to SDK v2 eventually
+- **Docker healthcheck false-negative**: the `server` container's healthcheck (`CMD curl -f http://localhost:8080/api/actuator/health`) always reports `unhealthy` because `eclipse-temurin:22-jre-alpine` has no `curl` installed — the app itself is fine, `docker ps` just always shows it unhealthy. Fix: add `RUN apk add --no-cache curl` to the `Dockerfile`.
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers, report/flag system — planned, not implemented
 

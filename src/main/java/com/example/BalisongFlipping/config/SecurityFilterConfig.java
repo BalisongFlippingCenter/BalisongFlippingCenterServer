@@ -53,7 +53,7 @@ public class SecurityFilterConfig {
                     // admin-only endpoints
                     .requestMatchers(HttpMethod.GET, "/reports").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/reports/*/status").hasRole("ADMIN")
-                    .requestMatchers("/auth/**", "/ws/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/stats", "/stats/**","/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
+                    .requestMatchers("/auth/**", "/ws/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/stats", "/stats/**", "/ai/chat", "/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated();
@@ -72,7 +72,7 @@ public class SecurityFilterConfig {
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowCredentials(true);
         configuration.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "PATCH"));
-        configuration.setAllowedHeaders(List.of("Authorization","Content-Type", "Origin", "Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization","Content-Type", "Origin", "Accept", "X-Client-Id", "X-Client-Key"));
         configuration.setExposedHeaders(List.of("Refresh-Token-Cookie", "Access-Control-Allow-Headers", "Access-Control-Allow-Origin", "Authorization, x-xsrf-token, Origin, Accept, X-Requested-With, " +
                 "Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers"));
 

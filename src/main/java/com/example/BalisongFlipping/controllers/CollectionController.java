@@ -2,8 +2,11 @@ package com.example.BalisongFlipping.controllers;
 
 import com.example.BalisongFlipping.dtos.CollectionDataDto;
 import com.example.BalisongFlipping.dtos.CollectionProfileDto;
+import com.example.BalisongFlipping.dtos.KnifeGalleryUploadUrlRequestDto;
 import com.example.BalisongFlipping.dtos.PublicProfileDto;
 import com.example.BalisongFlipping.dtos.UpdateKnifeDto;
+import com.example.BalisongFlipping.dtos.uploadsDtos.FileUploadRequestItem;
+import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.modals.collectionKnives.CollectionKnife;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.CollectionService;
@@ -18,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -248,6 +252,44 @@ public class CollectionController {
     }
 
     // -------------------------------------------------------------------------
+    // Request presigned S3 upload URLs for a new knife's gallery
+    // Client PUTs each file directly to S3, then calls /me/add-knife with the
+    // resulting URLs instead of raw files.
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/me/knife-gallery-upload-url")
+    public ResponseEntity<?> getKnifeGalleryUploadUrls(@RequestBody KnifeGalleryUploadUrlRequestDto dto) {
+        try {
+            if (dto.displayName() == null || dto.displayName().isBlank())
+                return new ResponseEntity<>("displayName is required.", HttpStatus.CONFLICT);
+            if (dto.files() == null || dto.files().isEmpty())
+                return new ResponseEntity<>("At least one file is required.", HttpStatus.CONFLICT);
+            if (dto.files().size() > 10)
+                return new ResponseEntity<>("Gallery cannot exceed 10 files.", HttpStatus.CONFLICT);
+
+            String collectionId = accountService.getSelf().collectionId();
+            String safeDisplayName = dto.displayName().replaceAll("[^a-zA-Z0-9._-]", "_");
+
+            List<PresignedUploadTargetDto> targets = new ArrayList<>();
+            for (FileUploadRequestItem file : dto.files()) {
+                String filename = (file.filename() != null && !file.filename().isBlank())
+                        ? file.filename()
+                        : UUID.randomUUID().toString();
+                String key = "collection-knives/" + collectionId + "/" + safeDisplayName + "/gallery/" + filename;
+                String uploadUrl = s3Service.generatePresignedUploadUrl(bucketName, key, file.contentType(), Duration.ofMinutes(10));
+                String publicUrl = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+                boolean isVideo = file.contentType() != null && file.contentType().startsWith("video/");
+                targets.add(new PresignedUploadTargetDto(key, uploadUrl, publicUrl, isVideo));
+            }
+
+            return new ResponseEntity<>(targets, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /collection/me/knife-gallery-upload-url -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Add knife
     // -------------------------------------------------------------------------
 
@@ -286,8 +328,8 @@ public class CollectionController {
             @RequestParam(value = "feelScore", required = false, defaultValue = "5") String feelScore,
             @RequestParam(value = "soundScore", required = false, defaultValue = "5") String soundScore,
             @RequestParam(value = "durabilityScore", required = false, defaultValue = "5") String durabilityScore,
-            // Optional gallery (max 10 files)
-            @RequestParam(value = "galleryFiles", required = false) MultipartFile[] galleryFiles
+            // Optional gallery — URLs from a prior /me/knife-gallery-upload-url call (max 10)
+            @RequestParam(value = "galleryUrls", required = false) String[] galleryUrls
     ) {
         try {
             String collectionId = accountService.getSelf().collectionId();
@@ -304,7 +346,7 @@ public class CollectionController {
                 return new ResponseEntity<>("Duplicate display name.", HttpStatus.CONFLICT);
             }
 
-            if (galleryFiles != null && galleryFiles.length > 10) {
+            if (galleryUrls != null && galleryUrls.length > 10) {
                 return new ResponseEntity<>("Gallery cannot exceed 10 files.", HttpStatus.CONFLICT);
             }
 
@@ -315,14 +357,21 @@ public class CollectionController {
             s3Service.uploadFile(bucketName, coverKey, coverPhoto.getSize(), coverPhoto.getContentType(), coverPhoto.getInputStream());
             String coverUrl = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + coverKey;
 
-            // Upload gallery files to S3
-            List<String> galleryUrls = new ArrayList<>();
-            if (galleryFiles != null) {
-                for (MultipartFile galleryFile : galleryFiles) {
-                    String galleryKey = "collection-knives/" + collectionId + "/" + safeDisplayName + "/gallery/" +
-                            (galleryFile.getOriginalFilename() != null ? galleryFile.getOriginalFilename() : UUID.randomUUID().toString());
-                    s3Service.uploadFile(bucketName, galleryKey, galleryFile.getSize(), galleryFile.getContentType(), galleryFile.getInputStream());
-                    galleryUrls.add("https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + galleryKey);
+            // Gallery files were already uploaded to S3 via /me/knife-gallery-upload-url —
+            // verify each URL was actually uploaded and belongs to this collection.
+            List<String> resolvedGalleryUrls = new ArrayList<>();
+            if (galleryUrls != null) {
+                String urlPrefix = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/";
+                String expectedKeyPrefix = "collection-knives/" + collectionId + "/";
+                for (String url : galleryUrls) {
+                    if (url == null || !url.startsWith(urlPrefix))
+                        throw new Exception("Invalid gallery URL.");
+                    String key = url.substring(urlPrefix.length());
+                    if (!key.startsWith(expectedKeyPrefix))
+                        throw new Exception("You do not own this uploaded file.");
+                    if (!s3Service.doesObjectExist(bucketName, key))
+                        throw new Exception("Uploaded gallery file not found — it may have failed to upload.");
+                    resolvedGalleryUrls.add(url);
                 }
             }
 
@@ -340,7 +389,7 @@ public class CollectionController {
                     hasModularBalance, balanceValue, bladeStyle, bladeFinish, bladeMaterial,
                     handleConstruction, handleMaterial, handleFinish,
                     qualityScoreVal, flippingScoreVal, feelScoreVal, soundScoreVal, durabilityScoreVal,
-                    galleryUrls
+                    resolvedGalleryUrls
             );
 
             return new ResponseEntity<>(newKnife, HttpStatus.OK);
