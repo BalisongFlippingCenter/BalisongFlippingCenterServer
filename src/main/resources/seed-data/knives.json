@@ -1,0 +1,115 @@
+[
+  {
+    "slug": "squid-industries-krake-raken",
+    "name": "Krake Raken",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto / Bowie / Spear Point",
+    "priceRange": "$220–$280",
+    "versions": [
+      {
+        "versionSlug": "v3",
+        "version": "v3",
+        "discontinued": false,
+        "releaseYear": 2022,
+        "description": "The v3 is the most refined iteration of the Krake Raken, featuring improved handle geometry, tighter tolerances, and an updated pivot system. Available as both a trainer and a live blade in three profiles, the v3 remains one of the best value-for-money channel-handle aluminum balisongs on the market and a top recommendation for intermediate flippers looking to move up from a budget knife.",
+        "overallLength": "10.5",
+        "weight": "4.19",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer",     "type": "trainer", "label": "Trainer",     "msrp": "220", "bladeStyle": "Trainer",     "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
+          { "variantSlug": "tanto",       "type": "live",    "label": "Tanto",       "msrp": "260", "bladeStyle": "Tanto",       "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" },
+          { "variantSlug": "bowie",       "type": "live",    "label": "Bowie",       "msrp": "260", "bladeStyle": "Bowie",       "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" },
+          { "variantSlug": "spear-point", "type": "live",    "label": "Spear Point", "msrp": "260", "bladeStyle": "Spear Point", "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",       "url": "https://squidindustries.co", "type": "official",  "note": "Available directly from the maker." },
+          { "label": "BladeHQ",                "url": "https://www.bladehq.com",    "type": "retailer",  "note": "Authorized retailer — availability varies." },
+          { "label": "Secondary Market / BST", "url": null,                         "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "v2-5",
+        "version": "v2.5",
+        "discontinued": true,
+        "releaseYear": 2021,
+        "description": "The v2.5 was an iterative hardware refresh of the v2 rather than a full redesign. Updated fasteners and minor geometry tweaks brought the knife closer to what would eventually become the v3. A short-run release that is relatively rare on the secondary market.",
+        "overallLength": "10.5",
+        "weight": "4.19",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "200", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "240", "bladeStyle": "Tanto",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" },
+          { "variantSlug": "bowie",   "type": "live",    "label": "Bowie",   "msrp": "240", "bladeStyle": "Bowie",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "No longer in production. A relatively rare find — check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "v2",
+        "version": "v2",
+        "discontinued": true,
+        "releaseYear": 2019,
+        "description": "The v2 addressed tolerance and hardware concerns from the original, delivering a noticeably tighter and more consistent knife out of the box. Improved pivot fitment and refined zen pin geometry made it a significant step forward, and it became many flippers' first exposure to a quality channel-handle balisong.",
+        "overallLength": "10.5",
+        "weight": "4.19",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "180", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "220", "bladeStyle": "Tanto",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" },
+          { "variantSlug": "bowie",   "type": "live",    "label": "Bowie",   "msrp": "220", "bladeStyle": "Bowie",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "No longer in production. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": true,
+        "releaseYear": 2018,
+        "description": "The original Krake Raken introduced Squid Industries' signature channel-handle design. While early production runs had some tolerance inconsistencies that were addressed in later versions, the v1 established the foundation for one of the most recognized trainer and live balisong lines in the community.",
+        "overallLength": "10.5",
+        "weight": "4.19",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "160", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "200", "bladeStyle": "Tanto",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" },
+          { "variantSlug": "bowie",   "type": "live",    "label": "Bowie",   "msrp": "200", "bladeStyle": "Bowie",   "bladeMaterial": "D2",                  "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "No longer in production. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  }
+]
