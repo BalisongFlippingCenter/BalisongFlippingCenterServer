@@ -67,7 +67,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
                 account.getEmailVerified(),
                 user.getDisplayName(),
                 user.getIdentifierCode(),
-                "USER",
+                account.getRole(),
                 user.getCollectionId() != null ? user.getCollectionId().toString() : null,
                 user.getBannerImg(),
                 user.getProfileImg(),
