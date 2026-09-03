@@ -99,6 +99,13 @@ public class AuthController {
                 return ResponseEntity.badRequest().body("Email already exists.");
             }
 
+            // admin accounts must verify their email before they can log in
+            if ("ADMIN".equals(registeredUser.getRole())) {
+                return new ResponseEntity<>(
+                        new AdminLoginChallengeDto(true, registeredUser.getEmail()),
+                        HttpStatus.ACCEPTED);
+            }
+
             // successful account creation
             return ResponseEntity.ok(registeredUser.getId() + " successfully created.");
         }
@@ -189,33 +196,57 @@ public class AuthController {
         // attempts to retrieve account from authentication service
         try {
             Account authenticatedUser = authenticationService.authenticate(loginUserDto);
-            User account = (User) authenticatedUser;
 
-            // creates new access token
-            String accessToken = jwtService.generateAccessToken(authenticatedUser);
+            // admin accounts require a second factor before tokens are issued
+            if ("ADMIN".equals(authenticatedUser.getRole())) {
+                authenticationService.sendAdminLoginCode(authenticatedUser);
+                return new ResponseEntity<>(
+                        new AdminLoginChallengeDto(true, authenticatedUser.getEmail()),
+                        HttpStatus.ACCEPTED);
+            }
 
-            // create new refresh token
-            RefreshToken refreshToken = refreshTokenService.createRefreshToken(loginUserDto.email());
-
-            // set refresh token in cookie
-            ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ofDays(7))
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
-
-            // get collection data
-            CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
-
-            // return account info with access token
-            return new ResponseEntity<>(new LoginResponseDto(accessToken, refreshToken.getToken(), accountService.toUserDto(authenticatedUser), collectionData), HttpStatus.OK);
+            return new ResponseEntity<>(buildLoginResponse(authenticatedUser, response), HttpStatus.OK);
         }
         catch(Exception e) {
-            log.error("Exception caught /login PostMapping -> ", e.getMessage());
+            log.error("Exception caught /login PostMapping -> {}", e.getMessage(), e);
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
         }
+    }
+
+    @PostMapping("/verify-admin-login")
+    public ResponseEntity<?> verifyAdminLogin(@RequestBody VerifyAdminLoginDto dto, HttpServletResponse response) {
+        try {
+            Account account = authenticationService.verifyAdminLoginCode(dto.email(), dto.code());
+            return new ResponseEntity<>(buildLoginResponse(account, response), HttpStatus.OK);
+        }
+        catch (Exception e) {
+            log.error("Exception caught /verify-admin-login PostMapping -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    private LoginResponseDto buildLoginResponse(Account authenticatedUser, HttpServletResponse response) throws Exception {
+        User account = (User) authenticatedUser;
+
+        // creates new access token
+        String accessToken = jwtService.generateAccessToken(authenticatedUser);
+
+        // create new refresh token
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(authenticatedUser.getEmail());
+
+        // set refresh token in cookie
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
+                .httpOnly(true)
+                .path("/")
+                .maxAge(Duration.ofDays(7))
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        // get collection data
+        CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
+
+        return new LoginResponseDto(accessToken, refreshToken.getToken(), accountService.toUserDto(authenticatedUser), collectionData);
     }
 
     @PostMapping("/google")

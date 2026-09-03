@@ -19,4 +19,7 @@ public interface AuthService {
 
     void forgotPassword(String email) throws Exception;
     void confirmForgotPassword(ConfirmForgotPasswordDto dto) throws Exception;
+
+    void sendAdminLoginCode(Account account) throws Exception;
+    Account verifyAdminLoginCode(String email, String code) throws Exception;
 }

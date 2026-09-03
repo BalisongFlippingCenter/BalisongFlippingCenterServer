@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -47,6 +48,9 @@ public class AuthServiceImplementation implements AuthService {
 
     @Autowired
     private EmailTokenRepository emailTokenRepository;
+
+    @Value("${admin.bootstrap.email:}")
+    private String adminBootstrapEmail;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -159,6 +163,7 @@ public class AuthServiceImplementation implements AuthService {
      *         create a new account in the db
      */
     @Override
+    @Transactional
     public Account signup(RegisterAccountDto newUser)  throws Exception {
         // check for account containing passed email already existing
         Optional<Account> holder = accountRepository.findAccountByEmail(newUser.email());
@@ -166,18 +171,25 @@ public class AuthServiceImplementation implements AuthService {
             return null;
         }
 
+        boolean isAdminEmail = !adminBootstrapEmail.isBlank() && adminBootstrapEmail.equalsIgnoreCase(newUser.email());
+
         // create new user in db
-        User u = accountRepository.save(createNewUser(newUser));
+        User newAccount = createNewUser(newUser);
+        if (isAdminEmail) newAccount.setRole("ADMIN");
+        User u = accountRepository.save(newAccount);
 
         // create new collection for user
         Collection c = collectionRepository.save(new Collection(u.getId()));
 
-        // update new user with collection id and auto-verify email (email verification deferred)
+        // update new user with collection id — admin accounts must verify email before they can log in
         u.setCollectionId(c.getId());
-        u.setEmailVerified(true);
+        u.setEmailVerified(!isAdminEmail);
 
-        // save and return new user in db
-        return accountRepository.save(u);
+        User saved = accountRepository.save(u);
+
+        if (isAdminEmail) sendAdminLoginCode(saved);
+
+        return saved;
     }
 
     /***
@@ -219,6 +231,9 @@ public class AuthServiceImplementation implements AuthService {
         Map<String, Object> userInfo = response.getBody();
         String email = (String) userInfo.get("email");
         if (email == null) throw new Exception("Google account has no email address.");
+
+        if (!adminBootstrapEmail.isBlank() && adminBootstrapEmail.equalsIgnoreCase(email))
+            throw new Exception("This account cannot sign in with Google. Please use your password.");
 
         String givenName = (String) userInfo.get("given_name");
         String fullName  = (String) userInfo.get("name");
@@ -284,6 +299,56 @@ public class AuthServiceImplementation implements AuthService {
         emailTokenRepository.delete(token);
         account.setPassword(passwordEncoder.encode(dto.newPassword()));
         accountRepository.save(account);
+    }
+
+    @Override
+    @Transactional
+    public void sendAdminLoginCode(Account account) throws Exception {
+        emailTokenRepository.deleteByOwner_Id(account.getId());
+
+        EmailVerificationToken token = new EmailVerificationToken(account);
+        emailTokenRepository.save(token);
+
+        emailService.sendEmail(
+                account.getEmail(),
+                "Balisong Flipping Hub — Admin Login Code",
+                "Your admin login code is: " + token.getToken() + "\n\nThis code expires in 10 minutes.\n\n" +
+                "If you did not just try to log in, secure your account immediately."
+        );
+    }
+
+    @Override
+    @Transactional
+    public Account verifyAdminLoginCode(String email, String code) throws Exception {
+        EmailVerificationToken token = emailTokenRepository.findByToken(code)
+                .orElseThrow(() -> new Exception("Invalid code."));
+
+        Account account = token.getOwner();
+
+        if (!account.getEmail().equalsIgnoreCase(email))
+            throw new Exception("Invalid code.");
+
+        if (token.getExpiration().isBefore(java.time.Instant.now()))
+            throw new Exception("Code has expired. Please log in again.");
+
+        if (!"ADMIN".equals(account.getRole()))
+            throw new Exception("Invalid code.");
+
+        emailTokenRepository.delete(token);
+
+        if (!account.getEmailVerified()) {
+            account.setEmailVerified(true);
+            accountRepository.save(account);
+        }
+
+        emailService.sendEmail(
+                account.getEmail(),
+                "Balisong Flipping Hub — Admin Login Successful",
+                "Your admin account just logged in at " + java.time.Instant.now() + ".\n\n" +
+                "If this wasn't you, reset your password immediately."
+        );
+
+        return account;
     }
 
     private String buildTempDisplayName(String googleName) {

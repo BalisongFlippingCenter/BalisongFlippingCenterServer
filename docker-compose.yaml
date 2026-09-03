@@ -44,6 +44,7 @@ services:
       - AI_CLIENT_KEY_WEBSITE=${AI_CLIENT_KEY_WEBSITE}
       - AI_CLIENT_KEY_DISCORD=${AI_CLIENT_KEY_DISCORD}
       - AI_RATE_LIMIT_PER_MINUTE=${AI_RATE_LIMIT_PER_MINUTE}
+      - ADMIN_BOOTSTRAP_EMAIL=${ADMIN_BOOTSTRAP_EMAIL}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
       interval: 30s

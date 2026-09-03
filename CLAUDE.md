@@ -59,6 +59,9 @@ utils/            ProfanityFilter
 | POST | `/auth/refresh-token-login` | Re-auth using cookie or body token |
 | GET | `/auth/refresh-access-token` | New access token from cookie |
 | PATCH | `/auth/display-name` | Set initial display name (auth required) |
+| POST | `/auth/verify-admin-login` | `{ email, code }` — completes login for `ADMIN` accounts (see below) |
+
+**Admin login step-up**: when `POST /auth/login` succeeds for an account with `role=ADMIN`, no tokens are issued yet — a 6-digit code (reusing the `EmailVerificationToken`/`email_verification_tokens` mechanism, 10-min expiry, same table password-reset uses) is emailed to the account and the response is `202` with `AdminLoginChallengeDto{requiresAdminVerification:true, email}` instead of `LoginResponseDto`. The client then calls `POST /auth/verify-admin-login` with the code to receive the normal `LoginResponseDto` (access token, refresh-token cookie, etc.) exactly as a non-admin login would. A second "login successful" email fires once verification succeeds, as a canary. Google sign-in (`/auth/google`) is blocked entirely for `ADMIN_BOOTSTRAP_EMAIL` (both logging into an existing account and creating a new one with that address) — password is the only login path for that account, so there's one auth path to secure rather than two, and no way for someone else to claim that email via Google before the real admin registers it. Non-admin logins are unaffected.
 
 ### Accounts (`/accounts/**`)
 Public (`/accounts/any/**` — no token needed):
@@ -113,6 +116,17 @@ Auth-required:
 | POST | `/conversations/{recipientId}/messages` | Send `{ body }` — creates conv if needed |
 | PATCH | `/conversations/{id}/read` | Mark all read |
 | DELETE | `/conversations/{id}` | Soft-delete for requester |
+
+### Reports & Moderation (`/reports/**`)
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/reports` | any authed user | `CreateReportDto{targetType, targetId, reason, additionalNote}` — targets `POST`/`COMMENT`/`PROFILE`/`CONVERSATION`/`MESSAGE`; reason set is validated per target type (see `ReportService`); dedupes and blocks self-reporting profiles |
+| GET | `/reports` | `ADMIN` | Paginated queue — filters: `status`, `targetType`, `page`, `size` |
+| PATCH | `/reports/{id}/status` | `ADMIN` | `{ status }` — `PENDING`/`REVIEWED`/`DISMISSED`/`ACTIONED`. `ACTIONED` is a record-keeping label only — it does not itself delete/mutate the target; the admin takes the actual action (e.g. delete post) via the normal endpoints |
+
+`ModerationService` auto-resolves `PROFILE` reports for `INAPPROPRIATE_NAME`/`INAPPROPRIATE_BIO`: if the profanity filter confirms it, the name is reset / bio cleared automatically, the user is emailed + notified, and the report is closed without human review. Everything else sits `PENDING` for an admin. `CONVERSATION`/`MESSAGE` reports currently skip reason-set validation (no `POST_REASONS`-equivalent set defined for them yet).
+
+**Becoming an admin**: `role` is a plain string on `Account` (`"USER"` by default), turned into `ROLE_<value>` for Spring Security, re-derived from the DB on every request (not cached in the JWT — a role change takes effect on the very next request). There's no promote-another-admin endpoint yet. The first admin is set via `AdminBootstrapRunner` (`config/`): it checks on startup **and every 3 minutes thereafter** (`@Scheduled`, requires `@EnableScheduling` on `BalisongFlippingApplication`) whether `ADMIN_BOOTSTRAP_EMAIL` is set and no account currently has `role=ADMIN` — if so, it promotes the matching account. The recurring check exists so a wiped/restored DB self-heals admin access (register the account again, wait up to 3 min) without needing a backend restart. It's a no-op forever once any admin exists, so it's safe to leave enabled — treat it as a "restore my admin access" safety net, not a way to add a second admin later.
 
 ### Notifications (`/notifications/**` — all auth required)
 | Method | Path | Purpose |
@@ -184,6 +198,7 @@ IaC lives in a separate repo, `BalisongFlippingCenterTerraformProd` (not cloned 
 - **Production backend**: EC2 instance `i-0fd15131d9c0681e8` (`100.61.159.104`), created by Terraform's `aws_instance.server` + `aws_eip.server`. Security group restricts port 8080 to CloudFront's managed prefix list only, SSH to a single admin CIDR (`var.ssh_allowed_cidr`).
   - `user_data` (see `templates/user_data.sh.tpl`) installs Docker/Compose/AWS CLI/SSM agent, pulls all app secrets from SSM Parameter Store (`/balisong/prod/*`) into `.env`, writes `docker-compose.yaml` from a template baked into `user_data`, logs into ECR, and starts the stack — so the instance is fully reproducible from a `terraform apply`, with no hand-maintained config on the box.
   - Secrets (`DB_PASSWORD`, `JWT_SECRET_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`) are Terraform variables supplied via `TF_VAR_*` env vars at apply time (never written to `terraform.tfvars`), stored as SSM `SecureString`/`String` parameters, and read by the instance role at boot — the app never gets long-lived AWS access keys (S3 access is via the instance's IAM role).
+  - `ADMIN_BOOTSTRAP_EMAIL` (see Reports & Moderation above) needs to be added to this same SSM/`user_data` pipeline in `BalisongFlippingCenterTerraformProd` before it'll take effect in prod — not yet done as of this writing. Also needs adding to the testing box's own `.env` by hand (it's outside Terraform).
 - **Testing/staging backend**: EC2 instance `i-0638063ca847f2274` (`3.217.173.234`, tagged `balisong-testing-server`) — the *original* manually-created box, kept intentionally outside Terraform as an isolated test environment with its own Postgres, decoupled from real user data. Its security group (`launch-wizard-2`) is still wide open (22/80/8080 to `0.0.0.0/0`) — fine for a personal test box, but tighten if that ever changes.
 - **CI/CD (GitHub Actions, `.github/workflows/deploy-server-to-prod.yml`)**: on push to `master` — build/push image to ECR (`AWS_ECR_REPOSITORY_URL` repo var, tagged with the commit SHA and `latest`) via OIDC (`AWS_BACKEND_DEPLOY_ROLE_ARN`), deploy via `aws ssm send-command` (`docker-compose pull server && up -d --force-recreate server`) against `AWS_EC2_INSTANCE_ID`, then poll `https://balisongflippingcenter.com/api/actuator/health` for up to 5 minutes to verify.
   - `AWS_EC2_INSTANCE_ID` must always match whichever instance ID Terraform currently outputs for `aws_instance.server` (`terraform output ec2_instance_id`) — it does **not** update itself. A 2026-08-24 incident traced back to this variable silently pointing at a Terraform instance that had been replaced (likely by the AMI-forced-replacement scenario noted in `ec2.tf`) and never updated, so deploys had been SSM-targeting a nonexistent instance while a manually-created replacement (now `balisong-testing-server`) served real production traffic with hand-edited, buggy config. Always cross-check this variable against `terraform output` after any `apply` that touches `aws_instance.server`.
@@ -200,10 +215,11 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 - **Change email / Change password**: service methods exist but deferred (require email verification)
 - **Docker healthcheck false-negative**: the `server` container's healthcheck (`CMD curl -f http://localhost:8080/api/actuator/health`) always reports `unhealthy` because `eclipse-temurin:22-jre-alpine` has no `curl` installed — the app itself is fine, `docker ps` just always shows it unhealthy. Fix: add `RUN apk add --no-cache curl` to the `Dockerfile`.
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
-- **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers, report/flag system — planned, not implemented
+- **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
+- **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
+- **Admin UI**: reports queue above has no frontend yet — planned for `BalisongFlippingCenterWeb`, not this repo.
 
 ---
 
 ## Working Agreement
 - **Always check in before making any code changes**
-- Test credentials: `tzenisekj@gmail.com` / `syndicate895`

@@ -43,8 +43,16 @@ jobs:
         run: |
           set -euo pipefail
           REGISTRY="${ECR_URL%%/*}"
-          COMMANDS=$(jq -n --arg registry "$REGISTRY" '[
+
+          # Re-pull every /balisong/prod/ SSM param into .env before each deploy.
+          # user_data only writes .env once at first boot, so without this, a
+          # newly-added SSM parameter never reaches the running container until
+          # someone manually logs into the box and refreshes it by hand.
+          ENV_REFRESH='aws ssm get-parameters-by-path --path /balisong/prod/ --with-decryption --region us-east-1 --query "Parameters[*].[Name,Value]" --output text > /tmp/params.txt && : > /home/ec2-user/.env && while IFS=$(printf "\t") read -r name value; do echo "${name##*/}=$value" >> /home/ec2-user/.env; done < /tmp/params.txt && chmod 600 /home/ec2-user/.env && chown ec2-user:ec2-user /home/ec2-user/.env && rm -f /tmp/params.txt'
+
+          COMMANDS=$(jq -n --arg registry "$REGISTRY" --arg envrefresh "$ENV_REFRESH" '[
             "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin \($registry)",
+            $envrefresh,
             "cd /home/ec2-user",
             "docker-compose pull server",
             "docker-compose up -d --no-deps --force-recreate server",
