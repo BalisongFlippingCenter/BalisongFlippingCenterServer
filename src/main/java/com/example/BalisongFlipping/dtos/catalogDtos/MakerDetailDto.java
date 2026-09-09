@@ -9,5 +9,10 @@ public record MakerDetailDto(
         String knownFor,
         String officialSiteUrl,
         String logoUrl,
+        Integer foundedYear,
+        String instagramUrl,
+        String youtubeUrl,
+        String facebookUrl,
+        String twitterUrl,
         List<KnifeSummaryDto> knives
 ) {}

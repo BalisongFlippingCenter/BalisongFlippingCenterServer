@@ -42,7 +42,20 @@ public class KnifeCatalogService {
         List<KnifeSummaryDto> knives = knifeRepository.findByMaker(maker).stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
-        return new MakerDetailDto(maker.getSlug(), maker.getName(), maker.getCountry(), maker.getKnownFor(), maker.getOfficialSiteUrl(), maker.getLogoUrl(), knives);
+        return new MakerDetailDto(
+                maker.getSlug(),
+                maker.getName(),
+                maker.getCountry(),
+                maker.getKnownFor(),
+                maker.getOfficialSiteUrl(),
+                maker.getLogoUrl(),
+                maker.getFoundedYear(),
+                maker.getInstagramUrl(),
+                maker.getYoutubeUrl(),
+                maker.getFacebookUrl(),
+                maker.getTwitterUrl(),
+                knives
+        );
     }
 
     private KnifeSummaryDto toSummary(Knife knife) {
@@ -71,6 +84,7 @@ public class KnifeCatalogService {
                 bladeStyleSummary(knife),
                 priceRangeSummary(knife),
                 knife.getCoverPhotoUrl(),
+                knife.getDescription(),
                 versions
         );
     }

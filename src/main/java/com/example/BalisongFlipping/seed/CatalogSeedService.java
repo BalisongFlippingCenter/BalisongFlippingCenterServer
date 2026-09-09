@@ -35,12 +35,12 @@ public class CatalogSeedService {
     public void seed() throws Exception {
         List<MakerSeedDto> makerDtos = readSeedFile("seed-data/makers.json", new TypeReference<List<MakerSeedDto>>() {});
         for (MakerSeedDto dto : makerDtos) {
-            upsertMaker(dto.slug(), dto.name(), dto.country(), dto.knownFor(), dto.logoUrl());
+            upsertMaker(dto);
         }
 
         List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
         for (KnifeSeedDto dto : knifeDtos) {
-            Maker maker = upsertMaker(dto.makerSlug(), dto.maker(), null, null, null);
+            Maker maker = upsertMaker(new MakerSeedDto(dto.makerSlug(), dto.maker(), null, null, null, null, null, null, null, null));
             seedKnife(dto, maker);
         }
 
@@ -53,13 +53,18 @@ public class CatalogSeedService {
         }
     }
 
-    private Maker upsertMaker(String slug, String name, String country, String knownFor, String logoUrl) {
-        Maker maker = makerRepository.findBySlug(slug).orElseGet(Maker::new);
-        maker.setSlug(slug);
-        maker.setName(name);
-        if (country != null) maker.setCountry(country);
-        if (knownFor != null) maker.setKnownFor(knownFor);
-        if (logoUrl != null) maker.setLogoUrl(logoUrl);
+    private Maker upsertMaker(MakerSeedDto dto) {
+        Maker maker = makerRepository.findBySlug(dto.slug()).orElseGet(Maker::new);
+        maker.setSlug(dto.slug());
+        maker.setName(dto.name());
+        if (dto.country() != null) maker.setCountry(dto.country());
+        if (dto.knownFor() != null) maker.setKnownFor(dto.knownFor());
+        if (dto.logoUrl() != null) maker.setLogoUrl(dto.logoUrl());
+        if (dto.foundedYear() != null) maker.setFoundedYear(dto.foundedYear());
+        if (dto.instagramUrl() != null) maker.setInstagramUrl(dto.instagramUrl());
+        if (dto.youtubeUrl() != null) maker.setYoutubeUrl(dto.youtubeUrl());
+        if (dto.facebookUrl() != null) maker.setFacebookUrl(dto.facebookUrl());
+        if (dto.twitterUrl() != null) maker.setTwitterUrl(dto.twitterUrl());
         return makerRepository.save(maker);
     }
 
@@ -69,6 +74,7 @@ public class CatalogSeedService {
         knife.setName(dto.name());
         knife.setMaker(maker);
         knife.setCoverPhotoUrl(dto.coverPhotoUrl());
+        knife.setDescription(dto.description());
         knife.getVersions().clear();
 
         for (VersionSeedDto v : dto.versions()) {

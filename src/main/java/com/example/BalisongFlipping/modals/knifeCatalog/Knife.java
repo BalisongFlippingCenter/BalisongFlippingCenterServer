@@ -28,6 +28,9 @@ public class Knife {
     @Column(columnDefinition = "TEXT")
     private String coverPhotoUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @OneToMany(mappedBy = "knife", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<KnifeVersion> versions = new ArrayList<>();
 
@@ -45,6 +48,9 @@ public class Knife {
 
     public String getCoverPhotoUrl() { return coverPhotoUrl; }
     public void setCoverPhotoUrl(String coverPhotoUrl) { this.coverPhotoUrl = coverPhotoUrl; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public List<KnifeVersion> getVersions() { return versions; }
     public void setVersions(List<KnifeVersion> versions) { this.versions = versions; }

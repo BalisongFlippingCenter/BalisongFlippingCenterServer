@@ -5,5 +5,10 @@ public record MakerSeedDto(
         String name,
         String country,
         String knownFor,
-        String logoUrl
+        String logoUrl,
+        Integer foundedYear,
+        String instagramUrl,
+        String youtubeUrl,
+        String facebookUrl,
+        String twitterUrl
 ) {}
