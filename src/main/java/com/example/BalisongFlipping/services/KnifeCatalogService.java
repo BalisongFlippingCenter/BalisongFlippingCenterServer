@@ -23,6 +23,13 @@ public class KnifeCatalogService {
         this.makerRepository = makerRepository;
     }
 
+    public List<MakerSummaryDto> listMakers() {
+        return makerRepository.findAll().stream()
+                .map(m -> new MakerSummaryDto(m.getSlug(), m.getName(), m.getCountry(), m.getLogoUrl()))
+                .sorted(Comparator.comparing(MakerSummaryDto::name, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
     public List<KnifeSummaryDto> searchKnives(String search) {
         List<Knife> knives = (search == null || search.isBlank())
                 ? knifeRepository.findAll()

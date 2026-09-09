@@ -34,17 +34,55 @@ public class CatalogSeedService {
     @Transactional
     public void seed() throws Exception {
         List<MakerSeedDto> makerDtos = readSeedFile("seed-data/makers.json", new TypeReference<List<MakerSeedDto>>() {});
+        List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
+        importCatalog(makerDtos, knifeDtos);
+    }
+
+    // Shared by the classpath-file seed above (initial/bootstrap load) and
+    // the admin-triggered bulk import endpoint (ongoing content updates,
+    // no deploy required) -- same upsert-by-slug semantics either way.
+    @Transactional
+    public void importCatalog(List<MakerSeedDto> makerDtos, List<KnifeSeedDto> knifeDtos) {
         for (MakerSeedDto dto : makerDtos) {
             upsertMaker(dto);
         }
 
-        List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
         for (KnifeSeedDto dto : knifeDtos) {
-            Maker maker = upsertMaker(new MakerSeedDto(dto.makerSlug(), dto.maker(), null, null, null, null, null, null, null, null));
+            Maker maker = upsertMaker(new MakerSeedDto(dto.makerSlug(), dto.maker(), null, null, null, null, null, null, null, null, null));
             seedKnife(dto, maker);
         }
 
-        log.info("Catalog seed complete: {} makers, {} knives", makerRepository.count(), knifeRepository.count());
+        log.info("Catalog import complete: {} makers, {} knives", makerRepository.count(), knifeRepository.count());
+    }
+
+    @Transactional
+    public Maker createMaker(MakerSeedDto dto) {
+        if (makerRepository.findBySlug(dto.slug()).isPresent()) {
+            throw new IllegalStateException("A maker with slug '" + dto.slug() + "' already exists");
+        }
+        return upsertMaker(dto);
+    }
+
+    @Transactional
+    public Maker updateMaker(String slug, MakerSeedDto dto) {
+        makerRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + slug + "'"));
+        // slug is immutable after creation (used in URLs) -- always apply
+        // updates against the path's slug, ignoring whatever the body sent.
+        return upsertMaker(new MakerSeedDto(
+                slug, dto.name(), dto.country(), dto.knownFor(), dto.officialSiteUrl(), dto.logoUrl(),
+                dto.foundedYear(), dto.instagramUrl(), dto.youtubeUrl(), dto.facebookUrl(), dto.twitterUrl()
+        ));
+    }
+
+    @Transactional
+    public void deleteMaker(String slug) {
+        Maker maker = makerRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + slug + "'"));
+        if (!knifeRepository.findByMaker(maker).isEmpty()) {
+            throw new IllegalStateException("Cannot delete maker '" + slug + "' -- it still has knives referencing it");
+        }
+        makerRepository.delete(maker);
     }
 
     private <T> T readSeedFile(String classpathLocation, TypeReference<T> type) throws Exception {
@@ -59,6 +97,7 @@ public class CatalogSeedService {
         maker.setName(dto.name());
         if (dto.country() != null) maker.setCountry(dto.country());
         if (dto.knownFor() != null) maker.setKnownFor(dto.knownFor());
+        if (dto.officialSiteUrl() != null) maker.setOfficialSiteUrl(dto.officialSiteUrl());
         if (dto.logoUrl() != null) maker.setLogoUrl(dto.logoUrl());
         if (dto.foundedYear() != null) maker.setFoundedYear(dto.foundedYear());
         if (dto.instagramUrl() != null) maker.setInstagramUrl(dto.instagramUrl());

@@ -53,6 +53,7 @@ public class SecurityFilterConfig {
                     // admin-only endpoints
                     .requestMatchers(HttpMethod.GET, "/reports").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/reports/*/status").hasRole("ADMIN")
+                    .requestMatchers("/admin/catalog/**").hasRole("ADMIN")
                     .requestMatchers("/auth/**", "/ws/**", "/tutorials", "/file/**", "/posts/any/**", "/collection/any/**", "/accounts/any/**", "/catalog/any/**", "/stats", "/stats/**", "/ai/chat", "/swagger-ui/**", "/swagger-resources/*", "/v3/api-docs/**", "/actuator/**")
                     .permitAll()
                     .anyRequest()
