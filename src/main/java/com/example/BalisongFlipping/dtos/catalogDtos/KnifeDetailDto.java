@@ -9,5 +9,6 @@ public record KnifeDetailDto(
         String makerSlug,
         String bladeStyleSummary,
         String priceRangeSummary,
+        String coverPhotoUrl,
         List<KnifeVersionResponseDto> versions
 ) {}

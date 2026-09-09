@@ -11,6 +11,13 @@ public enum BladeMaterial {
     HARDENED_STEEL,
     PLASTIC,
     ALUMINIUM_7075,
+    M390,
+    ELMAX,
+    STEEL_154CM,
+    STEEL_14C28N,
+    MAGNACUT,
+    DAMASCUS,
+    AUS_10,
     OTHER,
     UNKNOWN
 }

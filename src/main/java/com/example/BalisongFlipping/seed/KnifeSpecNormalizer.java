@@ -30,6 +30,11 @@ public class KnifeSpecNormalizer {
         if (has(v, "spear")) return BladeStyle.SPEAR_POINT;
         if (has(v, "weehawk")) return BladeStyle.WEEHAWK;
         if (has(v, "horse")) return BladeStyle.HORSE_SHOE;
+        if (has(v, "clip")) return BladeStyle.CLIP_POINT;
+        if (has(v, "drop")) return BladeStyle.DROP_POINT;
+        if (has(v, "wharncliffe") || has(v, "wharn")) return BladeStyle.WHARNCLIFFE;
+        if (has(v, "sheep")) return BladeStyle.SHEEPSFOOT;
+        if (has(v, "dagger")) return BladeStyle.DAGGER;
         if (has(v, "other")) return BladeStyle.OTHER;
         log.warn("Unrecognized blade style '{}', defaulting to UNKNOWN", raw);
         return BladeStyle.UNKNOWN;
@@ -38,6 +43,16 @@ public class KnifeSpecNormalizer {
     public static BladeMaterial bladeMaterial(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String v = raw.toLowerCase().trim();
+        // Specific steel codes checked before the generic "stainless" catch-all below,
+        // since most of them are themselves stainless steels and source text often
+        // names both (e.g. "M390 Stainless Steel").
+        if (has(v, "m390")) return BladeMaterial.M390;
+        if (has(v, "elmax")) return BladeMaterial.ELMAX;
+        if (has(v, "154")) return BladeMaterial.STEEL_154CM;
+        if (has(v, "14c28n")) return BladeMaterial.STEEL_14C28N;
+        if (has(v, "magnacut")) return BladeMaterial.MAGNACUT;
+        if (has(v, "damascus")) return BladeMaterial.DAMASCUS;
+        if (has(v, "aus-10") || has(v, "aus 10") || has(v, "aus10")) return BladeMaterial.AUS_10;
         if (has(v, "stainless")) return BladeMaterial.STAINLESS_STEEL;
         if (has(v, "titanium")) return BladeMaterial.TITANIUM;
         if (has(v, "d2")) return BladeMaterial.D2;
@@ -59,6 +74,8 @@ public class KnifeSpecNormalizer {
         if (raw == null || raw.isBlank()) return null;
         String v = raw.toLowerCase().trim();
         if (has(v, "mirror")) return BladeFinish.MIRROR_POLISHED;
+        if (has(v, "bead")) return BladeFinish.BEAD_BLASTED;
+        if (has(v, "pvd")) return BladeFinish.PVD;
         if (has(v, "stone")) return BladeFinish.STONE_WASH;
         if (has(v, "acid")) return BladeFinish.ACID_WASH;
         if (has(v, "black")) return BladeFinish.BLACK_WASH;
@@ -93,6 +110,8 @@ public class KnifeSpecNormalizer {
             return HandleMaterial.G_10;
         }
         if (has(v, "carbon")) return HandleMaterial.CARBON_FIBER;
+        if (has(v, "brass")) return HandleMaterial.BRASS;
+        if (has(v, "copper")) return HandleMaterial.COPPER;
         if (has(v, "stainless")) return HandleMaterial.STAINLESS_STEEL;
         if (has(v, "hardened")) return HandleMaterial.HARDENED_STEEL;
         if (has(v, "titanium")) return HandleMaterial.TITANIUM;

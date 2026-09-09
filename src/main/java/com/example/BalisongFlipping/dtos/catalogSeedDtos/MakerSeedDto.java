@@ -4,5 +4,6 @@ public record MakerSeedDto(
         String slug,
         String name,
         String country,
-        String knownFor
+        String knownFor,
+        String logoUrl
 ) {}

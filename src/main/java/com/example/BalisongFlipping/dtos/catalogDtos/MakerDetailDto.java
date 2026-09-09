@@ -8,5 +8,6 @@ public record MakerDetailDto(
         String country,
         String knownFor,
         String officialSiteUrl,
+        String logoUrl,
         List<KnifeSummaryDto> knives
 ) {}

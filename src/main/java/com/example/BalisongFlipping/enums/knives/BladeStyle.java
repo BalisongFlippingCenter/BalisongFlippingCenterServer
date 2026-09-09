@@ -9,6 +9,11 @@ public enum BladeStyle {
     WEEHAWK,
     AMERICAN_TANTO,
     HORSE_SHOE,
+    CLIP_POINT,
+    DROP_POINT,
+    WHARNCLIFFE,
+    SHEEPSFOOT,
+    DAGGER,
     OTHER,
     UNKNOWN
 }

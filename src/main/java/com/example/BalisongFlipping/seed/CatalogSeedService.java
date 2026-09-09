@@ -35,12 +35,12 @@ public class CatalogSeedService {
     public void seed() throws Exception {
         List<MakerSeedDto> makerDtos = readSeedFile("seed-data/makers.json", new TypeReference<List<MakerSeedDto>>() {});
         for (MakerSeedDto dto : makerDtos) {
-            upsertMaker(dto.slug(), dto.name(), dto.country(), dto.knownFor());
+            upsertMaker(dto.slug(), dto.name(), dto.country(), dto.knownFor(), dto.logoUrl());
         }
 
         List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
         for (KnifeSeedDto dto : knifeDtos) {
-            Maker maker = upsertMaker(dto.makerSlug(), dto.maker(), null, null);
+            Maker maker = upsertMaker(dto.makerSlug(), dto.maker(), null, null, null);
             seedKnife(dto, maker);
         }
 
@@ -53,12 +53,13 @@ public class CatalogSeedService {
         }
     }
 
-    private Maker upsertMaker(String slug, String name, String country, String knownFor) {
+    private Maker upsertMaker(String slug, String name, String country, String knownFor, String logoUrl) {
         Maker maker = makerRepository.findBySlug(slug).orElseGet(Maker::new);
         maker.setSlug(slug);
         maker.setName(name);
         if (country != null) maker.setCountry(country);
         if (knownFor != null) maker.setKnownFor(knownFor);
+        if (logoUrl != null) maker.setLogoUrl(logoUrl);
         return makerRepository.save(maker);
     }
 
@@ -67,6 +68,7 @@ public class CatalogSeedService {
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
         knife.setMaker(maker);
+        knife.setCoverPhotoUrl(dto.coverPhotoUrl());
         knife.getVersions().clear();
 
         for (VersionSeedDto v : dto.versions()) {

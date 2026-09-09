@@ -28,6 +28,9 @@ public class Maker {
     @Column(columnDefinition = "TEXT")
     private String officialSiteUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String logoUrl;
+
     private Instant lastCheckedAt;
 
     private String contentHash;
@@ -49,6 +52,9 @@ public class Maker {
 
     public String getOfficialSiteUrl() { return officialSiteUrl; }
     public void setOfficialSiteUrl(String officialSiteUrl) { this.officialSiteUrl = officialSiteUrl; }
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
 
     public Instant getLastCheckedAt() { return lastCheckedAt; }
     public void setLastCheckedAt(Instant lastCheckedAt) { this.lastCheckedAt = lastCheckedAt; }

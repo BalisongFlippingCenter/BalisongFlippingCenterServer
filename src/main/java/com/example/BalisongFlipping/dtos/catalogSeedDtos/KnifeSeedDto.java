@@ -9,5 +9,6 @@ public record KnifeSeedDto(
         String makerSlug,
         String bladeStyle,
         String priceRange,
+        String coverPhotoUrl,
         List<VersionSeedDto> versions
 ) {}
