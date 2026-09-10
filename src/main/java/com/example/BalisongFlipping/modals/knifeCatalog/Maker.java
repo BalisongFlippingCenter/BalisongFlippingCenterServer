@@ -28,6 +28,23 @@ public class Maker {
     @Column(columnDefinition = "TEXT")
     private String officialSiteUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String logoUrl;
+
+    private Integer foundedYear;
+
+    @Column(columnDefinition = "TEXT")
+    private String instagramUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String youtubeUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String facebookUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String twitterUrl;
+
     private Instant lastCheckedAt;
 
     private String contentHash;
@@ -49,6 +66,24 @@ public class Maker {
 
     public String getOfficialSiteUrl() { return officialSiteUrl; }
     public void setOfficialSiteUrl(String officialSiteUrl) { this.officialSiteUrl = officialSiteUrl; }
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
+    public Integer getFoundedYear() { return foundedYear; }
+    public void setFoundedYear(Integer foundedYear) { this.foundedYear = foundedYear; }
+
+    public String getInstagramUrl() { return instagramUrl; }
+    public void setInstagramUrl(String instagramUrl) { this.instagramUrl = instagramUrl; }
+
+    public String getYoutubeUrl() { return youtubeUrl; }
+    public void setYoutubeUrl(String youtubeUrl) { this.youtubeUrl = youtubeUrl; }
+
+    public String getFacebookUrl() { return facebookUrl; }
+    public void setFacebookUrl(String facebookUrl) { this.facebookUrl = facebookUrl; }
+
+    public String getTwitterUrl() { return twitterUrl; }
+    public void setTwitterUrl(String twitterUrl) { this.twitterUrl = twitterUrl; }
 
     public Instant getLastCheckedAt() { return lastCheckedAt; }
     public void setLastCheckedAt(Instant lastCheckedAt) { this.lastCheckedAt = lastCheckedAt; }

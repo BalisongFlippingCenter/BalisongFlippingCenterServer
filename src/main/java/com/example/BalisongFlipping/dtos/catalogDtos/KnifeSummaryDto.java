@@ -7,5 +7,6 @@ public record KnifeSummaryDto(
         String makerSlug,
         String bladeStyleSummary,
         String priceRangeSummary,
+        String coverPhotoUrl,
         boolean hasActiveVersion
 ) {}

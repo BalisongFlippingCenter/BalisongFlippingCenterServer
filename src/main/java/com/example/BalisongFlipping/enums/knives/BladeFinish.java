@@ -10,6 +10,8 @@ public enum BladeFinish {
     DLC,
     BLACK_WASH,
     MIRROR_POLISHED,
+    BEAD_BLASTED,
+    PVD,
     OTHER,
     UNKNOWN
 }

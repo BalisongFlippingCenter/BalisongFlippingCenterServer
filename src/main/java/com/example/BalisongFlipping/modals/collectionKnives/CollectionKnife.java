@@ -253,6 +253,14 @@ public class CollectionKnife {
                 this.bladeStyle = BladeStyle.JAPANESE_TANTO; break;
             case "spearpoint": case "spear point": case "spear-point": case "spear_point":
                 this.bladeStyle = BladeStyle.SPEAR_POINT; break;
+            case "clippoint": case "clip point": case "clip-point": case "clip_point":
+                this.bladeStyle = BladeStyle.CLIP_POINT; break;
+            case "droppoint": case "drop point": case "drop-point": case "drop_point":
+                this.bladeStyle = BladeStyle.DROP_POINT; break;
+            case "wharncliffe": this.bladeStyle = BladeStyle.WHARNCLIFFE; break;
+            case "sheepsfoot": case "sheeps foot": case "sheeps-foot": case "sheeps_foot":
+                this.bladeStyle = BladeStyle.SHEEPSFOOT; break;
+            case "dagger": this.bladeStyle = BladeStyle.DAGGER; break;
             case "other": this.bladeStyle = BladeStyle.OTHER; break;
             default: this.bladeStyle = BladeStyle.UNKNOWN; break;
         }
@@ -274,6 +282,9 @@ public class CollectionKnife {
                 this.bladeFinish = BladeFinish.ACID_WASH; break;
             case "blackwash": case "black wash": case "black-wash": case "black_wash":
                 this.bladeFinish = BladeFinish.BLACK_WASH; break;
+            case "beadblasted": case "bead blasted": case "bead-blasted": case "bead_blasted":
+                this.bladeFinish = BladeFinish.BEAD_BLASTED; break;
+            case "pvd": this.bladeFinish = BladeFinish.PVD; break;
             case "other": this.bladeFinish = BladeFinish.OTHER; break;
             default: this.bladeFinish = BladeFinish.UNKNOWN; break;
         }
@@ -295,6 +306,19 @@ public class CollectionKnife {
                 this.bladeMaterial = BladeMaterial.HARDENED_STEEL; break;
             case "7075aluminium": case "7075 aluminium": case "7075_aluminium": case "7075-aluminium":
                 this.bladeMaterial = BladeMaterial.ALUMINIUM_7075; break;
+            case "m390": this.bladeMaterial = BladeMaterial.M390; break;
+            case "elmax": this.bladeMaterial = BladeMaterial.ELMAX; break;
+            case "154cm": case "cpm-154": case "cpm 154": case "cpm154":
+                this.bladeMaterial = BladeMaterial.STEEL_154CM; break;
+            case "14c28n": this.bladeMaterial = BladeMaterial.STEEL_14C28N; break;
+            case "magnacut": this.bladeMaterial = BladeMaterial.MAGNACUT; break;
+            case "damascus": this.bladeMaterial = BladeMaterial.DAMASCUS; break;
+            case "aus-10": case "aus 10": case "aus10":
+                this.bladeMaterial = BladeMaterial.AUS_10; break;
+            case "aeb-l": case "aeb l": case "aebl":
+                this.bladeMaterial = BladeMaterial.AEB_L; break;
+            case "12c27": this.bladeMaterial = BladeMaterial.STEEL_12C27; break;
+            case "440c": this.bladeMaterial = BladeMaterial.STEEL_440C; break;
             case "other": this.bladeMaterial = BladeMaterial.OTHER; break;
             default: this.bladeMaterial = BladeMaterial.UNKNOWN; break;
         }
@@ -330,6 +354,8 @@ public class CollectionKnife {
             case "g-10 aluminium": case "g/10 aluminium": case "g10/aluminium": case "g 10 aluminium": case "g-10/aluminium":
                 this.handleMaterial = HandleMaterial.G_10_ALUMINIUM; break;
             case "plastic": this.handleMaterial = HandleMaterial.PLASTIC; break;
+            case "brass": this.handleMaterial = HandleMaterial.BRASS; break;
+            case "copper": this.handleMaterial = HandleMaterial.COPPER; break;
             default: this.handleMaterial = HandleMaterial.UNKNOWN; break;
         }
     }

@@ -23,6 +23,13 @@ public class KnifeCatalogService {
         this.makerRepository = makerRepository;
     }
 
+    public List<MakerSummaryDto> listMakers() {
+        return makerRepository.findAll().stream()
+                .map(m -> new MakerSummaryDto(m.getSlug(), m.getName(), m.getCountry(), m.getLogoUrl()))
+                .sorted(Comparator.comparing(MakerSummaryDto::name, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
     public List<KnifeSummaryDto> searchKnives(String search) {
         List<Knife> knives = (search == null || search.isBlank())
                 ? knifeRepository.findAll()
@@ -42,7 +49,20 @@ public class KnifeCatalogService {
         List<KnifeSummaryDto> knives = knifeRepository.findByMaker(maker).stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
-        return new MakerDetailDto(maker.getSlug(), maker.getName(), maker.getCountry(), maker.getKnownFor(), maker.getOfficialSiteUrl(), knives);
+        return new MakerDetailDto(
+                maker.getSlug(),
+                maker.getName(),
+                maker.getCountry(),
+                maker.getKnownFor(),
+                maker.getOfficialSiteUrl(),
+                maker.getLogoUrl(),
+                maker.getFoundedYear(),
+                maker.getInstagramUrl(),
+                maker.getYoutubeUrl(),
+                maker.getFacebookUrl(),
+                maker.getTwitterUrl(),
+                knives
+        );
     }
 
     private KnifeSummaryDto toSummary(Knife knife) {
@@ -53,6 +73,7 @@ public class KnifeCatalogService {
                 knife.getMaker().getSlug(),
                 bladeStyleSummary(knife),
                 priceRangeSummary(knife),
+                knife.getCoverPhotoUrl(),
                 hasActiveVersion(knife)
         );
     }
@@ -69,6 +90,8 @@ public class KnifeCatalogService {
                 knife.getMaker().getSlug(),
                 bladeStyleSummary(knife),
                 priceRangeSummary(knife),
+                knife.getCoverPhotoUrl(),
+                knife.getDescription(),
                 versions
         );
     }

@@ -34,17 +34,95 @@ public class CatalogSeedService {
     @Transactional
     public void seed() throws Exception {
         List<MakerSeedDto> makerDtos = readSeedFile("seed-data/makers.json", new TypeReference<List<MakerSeedDto>>() {});
+        List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
+        importCatalog(makerDtos, knifeDtos);
+    }
+
+    // Shared by the classpath-file seed above (initial/bootstrap load) and
+    // the admin-triggered bulk import endpoint (ongoing content updates,
+    // no deploy required) -- same upsert-by-slug semantics either way.
+    @Transactional
+    public void importCatalog(List<MakerSeedDto> makerDtos, List<KnifeSeedDto> knifeDtos) {
         for (MakerSeedDto dto : makerDtos) {
-            upsertMaker(dto.slug(), dto.name(), dto.country(), dto.knownFor());
+            upsertMaker(dto);
         }
 
-        List<KnifeSeedDto> knifeDtos = readSeedFile("seed-data/knives.json", new TypeReference<List<KnifeSeedDto>>() {});
         for (KnifeSeedDto dto : knifeDtos) {
-            Maker maker = upsertMaker(dto.makerSlug(), dto.maker(), null, null);
+            Maker maker = upsertMaker(new MakerSeedDto(dto.makerSlug(), dto.maker(), null, null, null, null, null, null, null, null, null));
             seedKnife(dto, maker);
         }
 
-        log.info("Catalog seed complete: {} makers, {} knives", makerRepository.count(), knifeRepository.count());
+        log.info("Catalog import complete: {} makers, {} knives", makerRepository.count(), knifeRepository.count());
+    }
+
+    @Transactional
+    public Maker createMaker(MakerSeedDto dto) {
+        if (makerRepository.findBySlug(dto.slug()).isPresent()) {
+            throw new IllegalStateException("A maker with slug '" + dto.slug() + "' already exists");
+        }
+        return upsertMaker(dto);
+    }
+
+    @Transactional
+    public Maker updateMaker(String slug, MakerSeedDto dto) {
+        makerRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + slug + "'"));
+        // slug is immutable after creation (used in URLs) -- always apply
+        // updates against the path's slug, ignoring whatever the body sent.
+        return upsertMaker(new MakerSeedDto(
+                slug, dto.name(), dto.country(), dto.knownFor(), dto.officialSiteUrl(), dto.logoUrl(),
+                dto.foundedYear(), dto.instagramUrl(), dto.youtubeUrl(), dto.facebookUrl(), dto.twitterUrl()
+        ));
+    }
+
+    @Transactional
+    public void deleteMaker(String slug) {
+        Maker maker = makerRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + slug + "'"));
+        if (!knifeRepository.findByMaker(maker).isEmpty()) {
+            throw new IllegalStateException("Cannot delete maker '" + slug + "' -- it still has knives referencing it");
+        }
+        makerRepository.delete(maker);
+    }
+
+    @Transactional
+    public Knife createKnife(KnifeSeedDto dto) {
+        if (knifeRepository.findBySlug(dto.slug()).isPresent()) {
+            throw new IllegalStateException("A knife with slug '" + dto.slug() + "' already exists");
+        }
+        Maker maker = requireMaker(dto.makerSlug());
+        return seedKnife(dto, maker);
+    }
+
+    @Transactional
+    public Knife updateKnife(String slug, KnifeSeedDto dto) {
+        knifeRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No knife found with slug '" + slug + "'"));
+        Maker maker = requireMaker(dto.makerSlug());
+        // slug is immutable after creation (used in URLs) -- always apply
+        // updates against the path's slug, ignoring whatever the body sent.
+        KnifeSeedDto corrected = new KnifeSeedDto(
+                slug, dto.name(), dto.maker(), dto.makerSlug(), dto.bladeStyle(), dto.priceRange(),
+                dto.coverPhotoUrl(), dto.description(), dto.versions()
+        );
+        return seedKnife(corrected, maker);
+    }
+
+    @Transactional
+    public void deleteKnife(String slug) {
+        Knife knife = knifeRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No knife found with slug '" + slug + "'"));
+        knifeRepository.delete(knife);
+    }
+
+    // Unlike the bulk-import/file-seed path (which auto-creates a stub Maker from
+    // whatever name/slug a knife entry names), the dedicated admin Knife form
+    // requires picking an existing Maker -- created via the Maker form first --
+    // so a typo in makerSlug surfaces as a clear 404 instead of silently minting
+    // a duplicate/incomplete Maker record.
+    private Maker requireMaker(String makerSlug) {
+        return makerRepository.findBySlug(makerSlug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + makerSlug + "' -- create the maker first"));
     }
 
     private <T> T readSeedFile(String classpathLocation, TypeReference<T> type) throws Exception {
@@ -53,27 +131,44 @@ public class CatalogSeedService {
         }
     }
 
-    private Maker upsertMaker(String slug, String name, String country, String knownFor) {
-        Maker maker = makerRepository.findBySlug(slug).orElseGet(Maker::new);
-        maker.setSlug(slug);
-        maker.setName(name);
-        if (country != null) maker.setCountry(country);
-        if (knownFor != null) maker.setKnownFor(knownFor);
+    private Maker upsertMaker(MakerSeedDto dto) {
+        Maker maker = makerRepository.findBySlug(dto.slug()).orElseGet(Maker::new);
+        maker.setSlug(dto.slug());
+        maker.setName(dto.name());
+        if (dto.country() != null) maker.setCountry(dto.country());
+        if (dto.knownFor() != null) maker.setKnownFor(dto.knownFor());
+        if (dto.officialSiteUrl() != null) maker.setOfficialSiteUrl(dto.officialSiteUrl());
+        if (dto.logoUrl() != null) maker.setLogoUrl(dto.logoUrl());
+        if (dto.foundedYear() != null) maker.setFoundedYear(dto.foundedYear());
+        if (dto.instagramUrl() != null) maker.setInstagramUrl(dto.instagramUrl());
+        if (dto.youtubeUrl() != null) maker.setYoutubeUrl(dto.youtubeUrl());
+        if (dto.facebookUrl() != null) maker.setFacebookUrl(dto.facebookUrl());
+        if (dto.twitterUrl() != null) maker.setTwitterUrl(dto.twitterUrl());
         return makerRepository.save(maker);
     }
 
-    private void seedKnife(KnifeSeedDto dto, Maker maker) {
+    private Knife seedKnife(KnifeSeedDto dto, Maker maker) {
         Knife knife = knifeRepository.findBySlug(dto.slug()).orElseGet(Knife::new);
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
         knife.setMaker(maker);
+        knife.setCoverPhotoUrl(dto.coverPhotoUrl());
+        knife.setDescription(dto.description());
+        // Wholesale replace, keyed by knife slug + version_slug uniqueness -- same
+        // semantics whether this came from the file seed, bulk import, or a single
+        // knife's admin edit form. Safe to re-run/re-save after fixing a mistake.
+        // The flush is required: without it, Hibernate can order the new versions'
+        // inserts before the old versions' orphan-removal deletes in the same batch,
+        // tripping the (knife_id, version_slug) unique constraint when a version_slug
+        // is reused across the clear.
         knife.getVersions().clear();
+        knifeRepository.saveAndFlush(knife);
 
         for (VersionSeedDto v : dto.versions()) {
             knife.getVersions().add(buildVersion(v, knife));
         }
 
-        knifeRepository.save(knife);
+        return knifeRepository.save(knife);
     }
 
     private KnifeVersion buildVersion(VersionSeedDto v, Knife knife) {

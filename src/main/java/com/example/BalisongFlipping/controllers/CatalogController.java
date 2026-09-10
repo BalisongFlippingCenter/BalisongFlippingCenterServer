@@ -3,6 +3,7 @@ package com.example.BalisongFlipping.controllers;
 import com.example.BalisongFlipping.dtos.catalogDtos.KnifeDetailDto;
 import com.example.BalisongFlipping.dtos.catalogDtos.KnifeSummaryDto;
 import com.example.BalisongFlipping.dtos.catalogDtos.MakerDetailDto;
+import com.example.BalisongFlipping.dtos.catalogDtos.MakerSummaryDto;
 import com.example.BalisongFlipping.services.KnifeCatalogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,17 @@ public class CatalogController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             log.error("GET /catalog/any/knives/{} -> {}", slug, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @GetMapping("/any/makers")
+    public ResponseEntity<?> listMakers() {
+        try {
+            List<MakerSummaryDto> results = knifeCatalogService.listMakers();
+            return new ResponseEntity<>(results, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("GET /catalog/any/makers -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }

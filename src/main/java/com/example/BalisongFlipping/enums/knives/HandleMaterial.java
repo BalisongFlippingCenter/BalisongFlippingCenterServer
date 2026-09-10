@@ -12,6 +12,8 @@ public enum HandleMaterial {
     ALUMINIUM_6061,
     ALUMINIUM_7075,
     CARBON_FIBER,
+    BRASS,
+    COPPER,
     OTHER,
     UNKNOWN
 }
