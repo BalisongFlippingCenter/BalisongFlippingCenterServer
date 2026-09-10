@@ -52,7 +52,7 @@ public class KnifeSpecNormalizer {
         if (has(v, "14c28n")) return BladeMaterial.STEEL_14C28N;
         if (has(v, "magnacut")) return BladeMaterial.MAGNACUT;
         if (has(v, "damascus")) return BladeMaterial.DAMASCUS;
-        if (has(v, "aus-10") || has(v, "aus 10") || has(v, "aus10")) return BladeMaterial.AUS_10;
+        if (has(v, "aus-10") || has(v, "aus 10") || has(v, "aus10") || has(v, "aus_10")) return BladeMaterial.AUS_10;
         if (has(v, "stainless")) return BladeMaterial.STAINLESS_STEEL;
         if (has(v, "titanium")) return BladeMaterial.TITANIUM;
         if (has(v, "d2")) return BladeMaterial.D2;
@@ -103,7 +103,7 @@ public class KnifeSpecNormalizer {
     public static HandleMaterial handleMaterial(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String v = raw.toLowerCase().trim();
-        boolean g10 = has(v, "g-10") || has(v, "g10") || has(v, "g 10");
+        boolean g10 = has(v, "g-10") || has(v, "g10") || has(v, "g 10") || has(v, "g_10");
         if (g10) {
             if (has(v, "titanium")) return HandleMaterial.G_10_TITANIUM;
             if (has(v, "alumin")) return HandleMaterial.G_10_ALUMINIUM;
@@ -181,7 +181,10 @@ public class KnifeSpecNormalizer {
     public static KnifeType variantType(String raw) {
         String v = raw == null ? "" : raw.toLowerCase().trim();
         if (v.equals("trainer")) return KnifeType.TRAINER;
-        if (v.equals("live")) return KnifeType.LIVE_BLADE;
+        // "live" is the seed-authoring shorthand; "live_blade" is KnifeType.LIVE_BLADE's
+        // own enum name, accepted too so reading a variant back via the read API (which
+        // returns raw enum names) and resubmitting it through an edit form round-trips.
+        if (v.equals("live") || v.equals("live_blade")) return KnifeType.LIVE_BLADE;
         throw new IllegalStateException("Unrecognized variant type '" + raw + "' — expected 'trainer' or 'live'");
     }
 

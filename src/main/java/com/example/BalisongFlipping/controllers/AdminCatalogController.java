@@ -1,8 +1,10 @@
 package com.example.BalisongFlipping.controllers;
 
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.CatalogImportDto;
+import com.example.BalisongFlipping.dtos.catalogSeedDtos.KnifeSeedDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.MakerSeedDto;
 import com.example.BalisongFlipping.seed.CatalogSeedService;
+import com.example.BalisongFlipping.services.KnifeCatalogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,9 @@ public class AdminCatalogController {
 
     @Autowired
     private CatalogSeedService catalogSeedService;
+
+    @Autowired
+    private KnifeCatalogService knifeCatalogService;
 
     @PostMapping("/import")
     public ResponseEntity<?> importCatalog(@RequestBody CatalogImportDto dto) {
@@ -72,6 +77,47 @@ public class AdminCatalogController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         } catch (Exception e) {
             log.error("DELETE /admin/catalog/makers/{} -> {}", slug, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PostMapping("/knives")
+    public ResponseEntity<?> createKnife(@RequestBody KnifeSeedDto dto) {
+        try {
+            catalogSeedService.createKnife(dto);
+            return new ResponseEntity<>(knifeCatalogService.getKnifeBySlug(dto.slug()), HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            log.error("POST /admin/catalog/knives -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @PutMapping("/knives/{slug}")
+    public ResponseEntity<?> updateKnife(@PathVariable("slug") String slug, @RequestBody KnifeSeedDto dto) {
+        try {
+            catalogSeedService.updateKnife(slug, dto);
+            return new ResponseEntity<>(knifeCatalogService.getKnifeBySlug(slug), HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("PUT /admin/catalog/knives/{} -> {}", slug, e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    @DeleteMapping("/knives/{slug}")
+    public ResponseEntity<?> deleteKnife(@PathVariable("slug") String slug) {
+        try {
+            catalogSeedService.deleteKnife(slug);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("DELETE /admin/catalog/knives/{} -> {}", slug, e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }

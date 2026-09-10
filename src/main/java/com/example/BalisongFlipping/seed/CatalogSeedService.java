@@ -85,6 +85,46 @@ public class CatalogSeedService {
         makerRepository.delete(maker);
     }
 
+    @Transactional
+    public Knife createKnife(KnifeSeedDto dto) {
+        if (knifeRepository.findBySlug(dto.slug()).isPresent()) {
+            throw new IllegalStateException("A knife with slug '" + dto.slug() + "' already exists");
+        }
+        Maker maker = requireMaker(dto.makerSlug());
+        return seedKnife(dto, maker);
+    }
+
+    @Transactional
+    public Knife updateKnife(String slug, KnifeSeedDto dto) {
+        knifeRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No knife found with slug '" + slug + "'"));
+        Maker maker = requireMaker(dto.makerSlug());
+        // slug is immutable after creation (used in URLs) -- always apply
+        // updates against the path's slug, ignoring whatever the body sent.
+        KnifeSeedDto corrected = new KnifeSeedDto(
+                slug, dto.name(), dto.maker(), dto.makerSlug(), dto.bladeStyle(), dto.priceRange(),
+                dto.coverPhotoUrl(), dto.description(), dto.versions()
+        );
+        return seedKnife(corrected, maker);
+    }
+
+    @Transactional
+    public void deleteKnife(String slug) {
+        Knife knife = knifeRepository.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("No knife found with slug '" + slug + "'"));
+        knifeRepository.delete(knife);
+    }
+
+    // Unlike the bulk-import/file-seed path (which auto-creates a stub Maker from
+    // whatever name/slug a knife entry names), the dedicated admin Knife form
+    // requires picking an existing Maker -- created via the Maker form first --
+    // so a typo in makerSlug surfaces as a clear 404 instead of silently minting
+    // a duplicate/incomplete Maker record.
+    private Maker requireMaker(String makerSlug) {
+        return makerRepository.findBySlug(makerSlug)
+                .orElseThrow(() -> new IllegalArgumentException("No maker found with slug '" + makerSlug + "' -- create the maker first"));
+    }
+
     private <T> T readSeedFile(String classpathLocation, TypeReference<T> type) throws Exception {
         try (InputStream in = new ClassPathResource(classpathLocation).getInputStream()) {
             return objectMapper.readValue(in, type);
@@ -107,20 +147,23 @@ public class CatalogSeedService {
         return makerRepository.save(maker);
     }
 
-    private void seedKnife(KnifeSeedDto dto, Maker maker) {
+    private Knife seedKnife(KnifeSeedDto dto, Maker maker) {
         Knife knife = knifeRepository.findBySlug(dto.slug()).orElseGet(Knife::new);
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
         knife.setMaker(maker);
         knife.setCoverPhotoUrl(dto.coverPhotoUrl());
         knife.setDescription(dto.description());
+        // Wholesale replace, keyed by knife slug + version_slug uniqueness -- same
+        // semantics whether this came from the file seed, bulk import, or a single
+        // knife's admin edit form. Safe to re-run/re-save after fixing a mistake.
         knife.getVersions().clear();
 
         for (VersionSeedDto v : dto.versions()) {
             knife.getVersions().add(buildVersion(v, knife));
         }
 
-        knifeRepository.save(knife);
+        return knifeRepository.save(knife);
     }
 
     private KnifeVersion buildVersion(VersionSeedDto v, Knife knife) {
