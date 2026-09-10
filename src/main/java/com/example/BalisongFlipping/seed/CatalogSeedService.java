@@ -157,7 +157,12 @@ public class CatalogSeedService {
         // Wholesale replace, keyed by knife slug + version_slug uniqueness -- same
         // semantics whether this came from the file seed, bulk import, or a single
         // knife's admin edit form. Safe to re-run/re-save after fixing a mistake.
+        // The flush is required: without it, Hibernate can order the new versions'
+        // inserts before the old versions' orphan-removal deletes in the same batch,
+        // tripping the (knife_id, version_slug) unique constraint when a version_slug
+        // is reused across the clear.
         knife.getVersions().clear();
+        knifeRepository.saveAndFlush(knife);
 
         for (VersionSeedDto v : dto.versions()) {
             knife.getVersions().add(buildVersion(v, knife));
