@@ -53,6 +53,9 @@ public class KnifeSpecNormalizer {
         if (has(v, "magnacut")) return BladeMaterial.MAGNACUT;
         if (has(v, "damascus")) return BladeMaterial.DAMASCUS;
         if (has(v, "aus-10") || has(v, "aus 10") || has(v, "aus10") || has(v, "aus_10")) return BladeMaterial.AUS_10;
+        if (has(v, "aeb-l") || has(v, "aeb l") || has(v, "aebl")) return BladeMaterial.AEB_L;
+        if (has(v, "12c27")) return BladeMaterial.STEEL_12C27;
+        if (has(v, "440c")) return BladeMaterial.STEEL_440C;
         if (has(v, "stainless")) return BladeMaterial.STAINLESS_STEEL;
         if (has(v, "titanium")) return BladeMaterial.TITANIUM;
         if (has(v, "d2")) return BladeMaterial.D2;

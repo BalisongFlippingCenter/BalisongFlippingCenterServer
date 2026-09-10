@@ -315,6 +315,10 @@ public class CollectionKnife {
             case "damascus": this.bladeMaterial = BladeMaterial.DAMASCUS; break;
             case "aus-10": case "aus 10": case "aus10":
                 this.bladeMaterial = BladeMaterial.AUS_10; break;
+            case "aeb-l": case "aeb l": case "aebl":
+                this.bladeMaterial = BladeMaterial.AEB_L; break;
+            case "12c27": this.bladeMaterial = BladeMaterial.STEEL_12C27; break;
+            case "440c": this.bladeMaterial = BladeMaterial.STEEL_440C; break;
             case "other": this.bladeMaterial = BladeMaterial.OTHER; break;
             default: this.bladeMaterial = BladeMaterial.UNKNOWN; break;
         }

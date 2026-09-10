@@ -18,6 +18,9 @@ public enum BladeMaterial {
     MAGNACUT,
     DAMASCUS,
     AUS_10,
+    AEB_L,
+    STEEL_12C27,
+    STEEL_440C,
     OTHER,
     UNKNOWN
 }
