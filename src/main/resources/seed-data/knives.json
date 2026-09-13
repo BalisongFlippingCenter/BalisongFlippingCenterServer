@@ -111,5 +111,110 @@
         ]
       }
     ]
+  },
+  {
+    "slug": "squid-industries-mako",
+    "name": "Mako",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$119.99–$149.99",
+    "versions": [
+      {
+        "versionSlug": "v5",
+        "version": "v5",
+        "discontinued": false,
+        "releaseYear": 2024,
+        "description": "The Mako is Squid Industries' best-selling metal trainer, doubling as a functional bottle opener. First introduced in 2019, the v5 refresh brought an updated handle design with added jimping, tighter tolerances, and an upgraded hardened stainless trainer blade. It remains one of the most affordable channel-handle metal trainers on the market.",
+        "overallLength": "9.75",
+        "weight": "4.19",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "6061 Aluminum",
+        "handleFinish": "Bead Blasted",
+        "variants": [
+          { "variantSlug": "bottle-opener", "type": "trainer", "label": "Bottle Opener", "msrp": "119.99", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including Inked, Sapphire, and Topaz cosmetic variants." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-tsunami",
+    "name": "Tsunami",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto / Bowie",
+    "priceRange": "$474.99 (trainer) / $690–$1,800 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": false,
+        "releaseYear": 2020,
+        "description": "The Tsunami is Squid Industries' flagship titanium balisong, described by the maker as 'the pinnacle of flipping evolution.' It was Squid's first titanium model, featuring a bi-directional-taper chanwich handle, precision bushings, and a hidden adjustable weighting system with six relocatable weight pins for tuning balance. Each unit is CNC-machined and hand-assembled with a serialized certificate of authenticity. Live blades are sold through Squid Industries' dedicated live-blade storefront and span a wide range of finish/dress tiers, from Zirblast up to full-dress models.",
+        "overallLength": "10.125",
+        "weight": "3.82",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Hidden Zen Pin",
+        "hasModularBalance": true,
+        "balanceValue": "6 relocatable weight pins (handle or box)",
+        "handleConstruction": "Chanwich",
+        "handleMaterial": "6AL-4V Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "trainer",  "type": "trainer", "label": "Trainer",       "msrp": "474.99", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
+          { "variantSlug": "tanto",    "type": "live",    "label": "Tanto",         "msrp": "750",    "bladeStyle": "Tanto",   "bladeMaterial": "S35VN",               "bladeFinish": "Stonewash" },
+          { "variantSlug": "bowie",    "type": "live",    "label": "Bowie",         "msrp": "750",    "bladeStyle": "Bowie",   "bladeMaterial": "S35VN",               "bladeFinish": "Stonewash" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",        "url": "https://www.squidindustries.co", "type": "official",  "note": "Trainer version, available directly from the maker." },
+          { "label": "Squid Industries Knives",  "url": "https://squidindustriesknives.co", "type": "official", "note": "Live-blade version, sold through the maker's dedicated live-blade storefront across multiple finish/dress tiers." },
+          { "label": "Secondary Market / BST",   "url": null, "type": "secondary", "note": "Higher dress tiers sell out quickly — check BST communities, eBay, and Reddit r/balisong for used listings." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy",
+    "name": "Squiddy",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$49.99–$79.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Squiddy is Squid Industries' entry-level trainer and the industry's first CNC-machined balisong made entirely from CPVC plastic. Despite its low price, the maker positions it as offering balance comparable to premium models, with steel rods at the handle ends for feel and momentum. It has no sharp edges and is TSA-compatible for travel, making it a common recommendation for total beginners.",
+        "overallLength": "10",
+        "weight": "2.5",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "CPVC Plastic",
+        "handleFinish": "Plain",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "49.99", "bladeStyle": "Trainer", "bladeMaterial": "CPVC Plastic", "bladeFinish": "Plain" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including U, B, WH, and metal (Squiddy-AL) variants." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
   }
 ]
