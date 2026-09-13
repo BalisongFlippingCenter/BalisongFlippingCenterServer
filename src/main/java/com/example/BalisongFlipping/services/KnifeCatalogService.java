@@ -105,7 +105,8 @@ public class KnifeCatalogService {
                         variant.getMsrp(),
                         enumName(variant.getBladeStyle()),
                         enumName(variant.getBladeMaterial()),
-                        enumName(variant.getBladeFinish())
+                        enumName(variant.getBladeFinish()),
+                        variant.getImageUrl()
                 ))
                 .collect(Collectors.toList());
 

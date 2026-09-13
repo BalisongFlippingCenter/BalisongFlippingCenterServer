@@ -7,5 +7,6 @@ public record KnifeVariantResponseDto(
         Double msrp,
         String bladeStyle,
         String bladeMaterial,
-        String bladeFinish
+        String bladeFinish,
+        String imageUrl
 ) {}

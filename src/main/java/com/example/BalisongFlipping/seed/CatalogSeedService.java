@@ -1,20 +1,26 @@
 package com.example.BalisongFlipping.seed;
 
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.*;
+import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.enums.knives.KnifeType;
 import com.example.BalisongFlipping.modals.knifeCatalog.*;
 import com.example.BalisongFlipping.repositories.KnifeRepository;
 import com.example.BalisongFlipping.repositories.MakerRepository;
+import com.example.BalisongFlipping.services.S3Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class CatalogSeedService {
@@ -24,6 +30,15 @@ public class CatalogSeedService {
     private final MakerRepository makerRepository;
     private final KnifeRepository knifeRepository;
     private final ObjectMapper objectMapper;
+
+    @Autowired
+    private S3Service s3Service;
+
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
+
+    @Value("${aws.s3.region}")
+    private String s3Region;
 
     public CatalogSeedService(MakerRepository makerRepository, KnifeRepository knifeRepository, ObjectMapper objectMapper) {
         this.makerRepository = makerRepository;
@@ -113,6 +128,20 @@ public class CatalogSeedService {
         Knife knife = knifeRepository.findBySlug(slug)
                 .orElseThrow(() -> new IllegalArgumentException("No knife found with slug '" + slug + "'"));
         knifeRepository.delete(knife);
+    }
+
+    public PresignedUploadTargetDto generateImageUploadUrl(CatalogImageUploadUrlRequestDto dto) throws Exception {
+        if (dto.knifeSlug() == null || dto.knifeSlug().isBlank()) throw new Exception("knifeSlug is required.");
+        if (dto.filename() == null || dto.filename().isBlank()) throw new Exception("filename is required.");
+
+        boolean isVariantImage = dto.versionSlug() != null && !dto.versionSlug().isBlank()
+                && dto.variantSlug() != null && !dto.variantSlug().isBlank();
+        String scope = isVariantImage ? (dto.versionSlug() + "/" + dto.variantSlug()) : "cover";
+        String key = "catalog/knives/" + dto.knifeSlug() + "/" + scope + "/" + UUID.randomUUID() + "-" + dto.filename();
+
+        String uploadUrl = s3Service.generatePresignedUploadUrl(bucketName, key, dto.contentType(), Duration.ofMinutes(10));
+        String publicUrl = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+        return new PresignedUploadTargetDto(key, uploadUrl, publicUrl, false);
     }
 
     // Unlike the bulk-import/file-seed path (which auto-creates a stub Maker from
@@ -213,6 +242,7 @@ public class CatalogSeedService {
         variant.setBladeStyle(type == KnifeType.TRAINER ? null : KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
         variant.setBladeMaterial(KnifeSpecNormalizer.bladeMaterial(dto.bladeMaterial()));
         variant.setBladeFinish(KnifeSpecNormalizer.bladeFinish(dto.bladeFinish()));
+        variant.setImageUrl(dto.imageUrl());
         return variant;
     }
 

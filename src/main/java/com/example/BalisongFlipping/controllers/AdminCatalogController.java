@@ -1,5 +1,6 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.dtos.catalogSeedDtos.CatalogImageUploadUrlRequestDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.CatalogImportDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.KnifeSeedDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.MakerSeedDto;
@@ -27,6 +28,16 @@ public class AdminCatalogController {
 
     @Autowired
     private KnifeCatalogService knifeCatalogService;
+
+    @PostMapping("/upload-url")
+    public ResponseEntity<?> getImageUploadUrl(@RequestBody CatalogImageUploadUrlRequestDto dto) {
+        try {
+            return new ResponseEntity<>(catalogSeedService.generateImageUploadUrl(dto), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("POST /admin/catalog/upload-url -> {}", e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
 
     @PostMapping("/import")
     public ResponseEntity<?> importCatalog(@RequestBody CatalogImportDto dto) {
