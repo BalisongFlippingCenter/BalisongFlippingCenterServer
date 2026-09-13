@@ -72,6 +72,7 @@ public class KnifeCatalogService {
                 knife.getMaker().getName(),
                 knife.getMaker().getSlug(),
                 bladeStyleSummary(knife),
+                handleMaterialSummary(knife),
                 priceRangeSummary(knife),
                 knife.getCoverPhotoUrl(),
                 hasActiveVersion(knife)
@@ -149,6 +150,16 @@ public class KnifeCatalogService {
                 .distinct()
                 .collect(Collectors.toList());
         return String.join(" / ", styles);
+    }
+
+    private String handleMaterialSummary(Knife knife) {
+        List<String> materials = knife.getVersions().stream()
+                .map(KnifeVersion::getHandleMaterial)
+                .filter(Objects::nonNull)
+                .map(this::humanize)
+                .distinct()
+                .collect(Collectors.toList());
+        return String.join(" / ", materials);
     }
 
     private String priceRangeSummary(Knife knife) {
