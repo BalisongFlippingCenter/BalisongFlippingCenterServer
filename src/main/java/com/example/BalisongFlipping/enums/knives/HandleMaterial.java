@@ -14,6 +14,10 @@ public enum HandleMaterial {
     CARBON_FIBER,
     BRASS,
     COPPER,
+    CPVC,
+    ACETAL,
+    ULTEM,
+    HDPE,
     OTHER,
     UNKNOWN
 }

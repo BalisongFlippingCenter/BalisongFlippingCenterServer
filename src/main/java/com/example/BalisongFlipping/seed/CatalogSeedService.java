@@ -1,20 +1,27 @@
 package com.example.BalisongFlipping.seed;
 
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.*;
+import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.enums.knives.KnifeType;
 import com.example.BalisongFlipping.modals.knifeCatalog.*;
 import com.example.BalisongFlipping.repositories.KnifeRepository;
 import com.example.BalisongFlipping.repositories.MakerRepository;
+import com.example.BalisongFlipping.services.S3Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class CatalogSeedService {
@@ -24,6 +31,15 @@ public class CatalogSeedService {
     private final MakerRepository makerRepository;
     private final KnifeRepository knifeRepository;
     private final ObjectMapper objectMapper;
+
+    @Autowired
+    private S3Service s3Service;
+
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
+
+    @Value("${aws.s3.region}")
+    private String s3Region;
 
     public CatalogSeedService(MakerRepository makerRepository, KnifeRepository knifeRepository, ObjectMapper objectMapper) {
         this.makerRepository = makerRepository;
@@ -115,6 +131,20 @@ public class CatalogSeedService {
         knifeRepository.delete(knife);
     }
 
+    public PresignedUploadTargetDto generateImageUploadUrl(CatalogImageUploadUrlRequestDto dto) throws Exception {
+        if (dto.knifeSlug() == null || dto.knifeSlug().isBlank()) throw new Exception("knifeSlug is required.");
+        if (dto.filename() == null || dto.filename().isBlank()) throw new Exception("filename is required.");
+
+        boolean isVariantImage = dto.versionSlug() != null && !dto.versionSlug().isBlank()
+                && dto.variantSlug() != null && !dto.variantSlug().isBlank();
+        String scope = isVariantImage ? (dto.versionSlug() + "/" + dto.variantSlug()) : "cover";
+        String key = "catalog/knives/" + dto.knifeSlug() + "/" + scope + "/" + UUID.randomUUID() + "-" + dto.filename();
+
+        String uploadUrl = s3Service.generatePresignedUploadUrl(bucketName, key, dto.contentType(), Duration.ofMinutes(10));
+        String publicUrl = "https://" + bucketName + ".s3." + s3Region + ".amazonaws.com/" + key;
+        return new PresignedUploadTargetDto(key, uploadUrl, publicUrl, false);
+    }
+
     // Unlike the bulk-import/file-seed path (which auto-creates a stub Maker from
     // whatever name/slug a knife entry names), the dedicated admin Knife form
     // requires picking an existing Maker -- created via the Maker form first --
@@ -148,6 +178,8 @@ public class CatalogSeedService {
     }
 
     private Knife seedKnife(KnifeSeedDto dto, Maker maker) {
+        validateRequiredFields(dto);
+
         Knife knife = knifeRepository.findBySlug(dto.slug()).orElseGet(Knife::new);
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
@@ -169,6 +201,50 @@ public class CatalogSeedService {
         }
 
         return knifeRepository.save(knife);
+    }
+
+    // Every version must carry the full physical spec sheet, and every variant its price --
+    // live-blade variants additionally need a blade style and blade material, since those
+    // vary per variant (trainer blades are exempt from both: trainer steel is essentially
+    // always the same generic softer stock regardless of knife, so it isn't a meaningful
+    // per-product fact, but a value can still be set if you want to track it). Blade finish
+    // is not tracked at all: purely cosmetic, and this is an info page, not a store.
+    private void validateRequiredFields(KnifeSeedDto dto) {
+        for (VersionSeedDto v : dto.versions()) {
+            List<String> missing = new ArrayList<>();
+            if (isBlank(v.overallLength()))     missing.add("overallLength");
+            if (isBlank(v.weight()))            missing.add("weight");
+            if (isBlank(v.pivotSystem()))       missing.add("pivotSystem");
+            if (isBlank(v.latchType()))         missing.add("latchType");
+            if (isBlank(v.pinSystem()))         missing.add("pinSystem");
+            if (isBlank(v.handleConstruction())) missing.add("handleConstruction");
+            if (isBlank(v.handleMaterial()))    missing.add("handleMaterial");
+            if (isBlank(v.handleFinish()))      missing.add("handleFinish");
+            if (!missing.isEmpty()) {
+                throw new CatalogValidationException(
+                        "Version '" + v.versionSlug() + "' is missing required field(s): " + String.join(", ", missing));
+            }
+
+            for (VariantSeedDto variant : v.variants()) {
+                List<String> variantMissing = new ArrayList<>();
+                if (isBlank(variant.msrp())) variantMissing.add("msrp");
+
+                if (KnifeSpecNormalizer.variantType(variant.type()) == KnifeType.LIVE_BLADE) {
+                    if (isBlank(variant.bladeStyle()))    variantMissing.add("bladeStyle");
+                    if (isBlank(variant.bladeMaterial())) variantMissing.add("bladeMaterial");
+                }
+
+                if (!variantMissing.isEmpty()) {
+                    throw new CatalogValidationException(
+                            "Variant '" + variant.variantSlug() + "' in version '" + v.versionSlug()
+                                    + "' is missing required field(s): " + String.join(", ", variantMissing));
+                }
+            }
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private KnifeVersion buildVersion(VersionSeedDto v, Knife knife) {
@@ -210,9 +286,9 @@ public class CatalogSeedService {
         variant.setType(type);
         variant.setLabel(dto.label());
         variant.setMsrp(parseDouble(dto.msrp()));
-        variant.setBladeStyle(type == KnifeType.TRAINER ? null : KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
+        variant.setBladeStyle(KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
         variant.setBladeMaterial(KnifeSpecNormalizer.bladeMaterial(dto.bladeMaterial()));
-        variant.setBladeFinish(KnifeSpecNormalizer.bladeFinish(dto.bladeFinish()));
+        variant.setImageUrl(dto.imageUrl());
         return variant;
     }
 
