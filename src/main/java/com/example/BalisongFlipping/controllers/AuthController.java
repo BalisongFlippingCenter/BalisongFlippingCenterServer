@@ -205,6 +205,12 @@ public class AuthController {
                         HttpStatus.ACCEPTED);
             }
 
+            // password-based accounts must verify their email before they can log in
+            // (Google sign-in sets emailVerified true at creation, so this never blocks those)
+            if (!Boolean.TRUE.equals(authenticatedUser.getEmailVerified())) {
+                return new ResponseEntity<>("Please verify your email before logging in.", HttpStatus.CONFLICT);
+            }
+
             return new ResponseEntity<>(buildLoginResponse(authenticatedUser, response), HttpStatus.OK);
         }
         catch(Exception e) {
