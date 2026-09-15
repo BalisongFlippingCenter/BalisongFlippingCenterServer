@@ -181,13 +181,18 @@ public class AuthServiceImplementation implements AuthService {
         // create new collection for user
         Collection c = collectionRepository.save(new Collection(u.getId()));
 
-        // update new user with collection id — admin accounts must verify email before they can log in
+        // update new user with collection id — every password-based account must verify its
+        // email before it's usable; admin accounts separately step up via a login code instead
         u.setCollectionId(c.getId());
-        u.setEmailVerified(!isAdminEmail);
+        u.setEmailVerified(false);
 
         User saved = accountRepository.save(u);
 
-        if (isAdminEmail) sendAdminLoginCode(saved);
+        if (isAdminEmail) {
+            sendAdminLoginCode(saved);
+        } else {
+            sendEmailVerification(saved.getEmail());
+        }
 
         return saved;
     }

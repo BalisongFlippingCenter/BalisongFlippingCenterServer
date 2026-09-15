@@ -60,8 +60,12 @@ utils/            ProfanityFilter
 | GET | `/auth/refresh-access-token` | New access token from cookie |
 | PATCH | `/auth/display-name` | Set initial display name (auth required) |
 | POST | `/auth/verify-admin-login` | `{ email, code }` — completes login for `ADMIN` accounts (see below) |
+| GET | `/auth/verify-email-token/{token}` | Completes email verification for a new password-based account |
+| POST | `/auth/resend-email-token/{email}` | Re-sends (replaces) the 6-digit verification code |
 
 **Admin login step-up**: when `POST /auth/login` succeeds for an account with `role=ADMIN`, no tokens are issued yet — a 6-digit code (reusing the `EmailVerificationToken`/`email_verification_tokens` mechanism, 10-min expiry, same table password-reset uses) is emailed to the account and the response is `202` with `AdminLoginChallengeDto{requiresAdminVerification:true, email}` instead of `LoginResponseDto`. The client then calls `POST /auth/verify-admin-login` with the code to receive the normal `LoginResponseDto` (access token, refresh-token cookie, etc.) exactly as a non-admin login would. A second "login successful" email fires once verification succeeds, as a canary. Google sign-in (`/auth/google`) is blocked entirely for `ADMIN_BOOTSTRAP_EMAIL` (both logging into an existing account and creating a new one with that address) — password is the only login path for that account, so there's one auth path to secure rather than two, and no way for someone else to claim that email via Google before the real admin registers it. Non-admin logins are unaffected.
+
+**Email verification (password-based accounts)**: every account created via `POST /auth/register` starts with `emailVerified=false` and gets a 6-digit code emailed immediately (same `EmailVerificationToken` mechanism as admin step-up). `POST /auth/login` rejects an unverified account with `409` and the plain-text body `"Please verify your email before logging in."` (never issues tokens) until `GET /auth/verify-email-token/{token}` succeeds. Google sign-in (`/auth/google`) sets `emailVerified=true` at account creation and is entirely unaffected — Google already verifies the email as part of OAuth, so there's nothing to re-verify. The frontend's `RegisterVerifyPage`/`VerificationTokenInput` (`/register/verify/:email`) handles code entry and resend for both the post-registration redirect and the login-blocked case.
 
 ### Accounts (`/accounts/**`)
 Public (`/accounts/any/**` — no token needed):
@@ -211,8 +215,7 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ---
 
 ## Known Gaps / To Do
-- **Email verification**: entity + service exist but not wired into registration flow
-- **Change email / Change password**: service methods exist but deferred (require email verification)
+- **Change email / Change password**: service methods exist but deferred
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
 - **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
