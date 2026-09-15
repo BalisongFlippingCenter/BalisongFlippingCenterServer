@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -177,6 +178,8 @@ public class CatalogSeedService {
     }
 
     private Knife seedKnife(KnifeSeedDto dto, Maker maker) {
+        validateRequiredFields(dto);
+
         Knife knife = knifeRepository.findBySlug(dto.slug()).orElseGet(Knife::new);
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
@@ -198,6 +201,50 @@ public class CatalogSeedService {
         }
 
         return knifeRepository.save(knife);
+    }
+
+    // Every version must carry the full physical spec sheet, and every variant its price --
+    // live-blade variants additionally need a blade style and blade material, since those
+    // vary per variant (trainer blades are exempt from both: trainer steel is essentially
+    // always the same generic softer stock regardless of knife, so it isn't a meaningful
+    // per-product fact, but a value can still be set if you want to track it). Blade finish
+    // is not tracked at all: purely cosmetic, and this is an info page, not a store.
+    private void validateRequiredFields(KnifeSeedDto dto) {
+        for (VersionSeedDto v : dto.versions()) {
+            List<String> missing = new ArrayList<>();
+            if (isBlank(v.overallLength()))     missing.add("overallLength");
+            if (isBlank(v.weight()))            missing.add("weight");
+            if (isBlank(v.pivotSystem()))       missing.add("pivotSystem");
+            if (isBlank(v.latchType()))         missing.add("latchType");
+            if (isBlank(v.pinSystem()))         missing.add("pinSystem");
+            if (isBlank(v.handleConstruction())) missing.add("handleConstruction");
+            if (isBlank(v.handleMaterial()))    missing.add("handleMaterial");
+            if (isBlank(v.handleFinish()))      missing.add("handleFinish");
+            if (!missing.isEmpty()) {
+                throw new CatalogValidationException(
+                        "Version '" + v.versionSlug() + "' is missing required field(s): " + String.join(", ", missing));
+            }
+
+            for (VariantSeedDto variant : v.variants()) {
+                List<String> variantMissing = new ArrayList<>();
+                if (isBlank(variant.msrp())) variantMissing.add("msrp");
+
+                if (KnifeSpecNormalizer.variantType(variant.type()) == KnifeType.LIVE_BLADE) {
+                    if (isBlank(variant.bladeStyle()))    variantMissing.add("bladeStyle");
+                    if (isBlank(variant.bladeMaterial())) variantMissing.add("bladeMaterial");
+                }
+
+                if (!variantMissing.isEmpty()) {
+                    throw new CatalogValidationException(
+                            "Variant '" + variant.variantSlug() + "' in version '" + v.versionSlug()
+                                    + "' is missing required field(s): " + String.join(", ", variantMissing));
+                }
+            }
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private KnifeVersion buildVersion(VersionSeedDto v, Knife knife) {
@@ -239,9 +286,8 @@ public class CatalogSeedService {
         variant.setType(type);
         variant.setLabel(dto.label());
         variant.setMsrp(parseDouble(dto.msrp()));
-        variant.setBladeStyle(type == KnifeType.TRAINER ? null : KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
+        variant.setBladeStyle(KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
         variant.setBladeMaterial(KnifeSpecNormalizer.bladeMaterial(dto.bladeMaterial()));
-        variant.setBladeFinish(KnifeSpecNormalizer.bladeFinish(dto.bladeFinish()));
         variant.setImageUrl(dto.imageUrl());
         return variant;
     }

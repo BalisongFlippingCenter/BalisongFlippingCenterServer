@@ -62,6 +62,12 @@ public class KnifeSpecNormalizer {
         if (has(v, "s35vn")) return BladeMaterial.S35VN;
         if (has(v, "s32vn")) return BladeMaterial.S32VN;
         if (has(v, "hardened")) return BladeMaterial.HARDENED_STEEL;
+        // Specific plastics checked before the generic "plastic" catch-all, same
+        // pattern as the steel/aluminum codes above.
+        if (has(v, "cpvc")) return BladeMaterial.CPVC;
+        if (has(v, "acetal")) return BladeMaterial.ACETAL;
+        if (has(v, "ultem")) return BladeMaterial.ULTEM;
+        if (has(v, "hdpe")) return BladeMaterial.HDPE;
         if (has(v, "plastic")) return BladeMaterial.PLASTIC;
         if (has(v, "alumin")) {
             if (has(v, "7075")) return BladeMaterial.ALUMINIUM_7075;
@@ -71,25 +77,6 @@ public class KnifeSpecNormalizer {
         if (has(v, "other")) return BladeMaterial.OTHER;
         log.warn("Unrecognized blade material '{}', defaulting to UNKNOWN", raw);
         return BladeMaterial.UNKNOWN;
-    }
-
-    public static BladeFinish bladeFinish(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        String v = raw.toLowerCase().trim();
-        if (has(v, "mirror")) return BladeFinish.MIRROR_POLISHED;
-        if (has(v, "bead")) return BladeFinish.BEAD_BLASTED;
-        if (has(v, "pvd")) return BladeFinish.PVD;
-        if (has(v, "stone")) return BladeFinish.STONE_WASH;
-        if (has(v, "acid")) return BladeFinish.ACID_WASH;
-        if (has(v, "black")) return BladeFinish.BLACK_WASH;
-        if (has(v, "dual")) return BladeFinish.DUALTONE;
-        if (has(v, "dlc")) return BladeFinish.DLC;
-        if (has(v, "satin")) return BladeFinish.SATIN;
-        if (has(v, "polish")) return BladeFinish.POLISHED;
-        if (has(v, "plain")) return BladeFinish.PLAIN;
-        if (has(v, "other")) return BladeFinish.OTHER;
-        log.warn("Unrecognized blade finish '{}', defaulting to UNKNOWN", raw);
-        return BladeFinish.UNKNOWN;
     }
 
     public static HandleConstruction handleConstruction(String raw) {
@@ -118,6 +105,12 @@ public class KnifeSpecNormalizer {
         if (has(v, "stainless")) return HandleMaterial.STAINLESS_STEEL;
         if (has(v, "hardened")) return HandleMaterial.HARDENED_STEEL;
         if (has(v, "titanium")) return HandleMaterial.TITANIUM;
+        // Specific plastics checked before the generic "plastic" catch-all, same
+        // pattern as the steel/aluminum codes above.
+        if (has(v, "cpvc")) return HandleMaterial.CPVC;
+        if (has(v, "acetal")) return HandleMaterial.ACETAL;
+        if (has(v, "ultem")) return HandleMaterial.ULTEM;
+        if (has(v, "hdpe")) return HandleMaterial.HDPE;
         if (has(v, "plastic")) return HandleMaterial.PLASTIC;
         if (has(v, "alumin")) {
             if (has(v, "7075")) return HandleMaterial.ALUMINIUM_7075;

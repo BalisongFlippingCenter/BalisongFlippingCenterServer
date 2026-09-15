@@ -5,6 +5,7 @@ import com.example.BalisongFlipping.dtos.catalogSeedDtos.CatalogImportDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.KnifeSeedDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.MakerSeedDto;
 import com.example.BalisongFlipping.seed.CatalogSeedService;
+import com.example.BalisongFlipping.seed.CatalogValidationException;
 import com.example.BalisongFlipping.services.KnifeCatalogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,8 @@ public class AdminCatalogController {
                     dto.knives() != null ? dto.knives() : List.of()
             );
             return new ResponseEntity<>(HttpStatus.OK);
+        } catch (CatalogValidationException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("POST /admin/catalog/import -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
@@ -97,6 +100,8 @@ public class AdminCatalogController {
         try {
             catalogSeedService.createKnife(dto);
             return new ResponseEntity<>(knifeCatalogService.getKnifeBySlug(dto.slug()), HttpStatus.CREATED);
+        } catch (CatalogValidationException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (IllegalStateException e) {
@@ -112,6 +117,8 @@ public class AdminCatalogController {
         try {
             catalogSeedService.updateKnife(slug, dto);
             return new ResponseEntity<>(knifeCatalogService.getKnifeBySlug(slug), HttpStatus.OK);
+        } catch (CatalogValidationException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {

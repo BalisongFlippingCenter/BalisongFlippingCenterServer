@@ -24,7 +24,7 @@
         "handleMaterial": "6061 Aluminum",
         "handleFinish": "Bead Blasted",
         "variants": [
-          { "variantSlug": "bottle-opener", "type": "trainer", "label": "Bottle Opener", "msrp": "119.99", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" }
+          { "variantSlug": "bottle-opener", "type": "trainer", "label": "Bottle Opener", "msrp": "119.99", "bladeStyle": "Trainer" }
         ],
         "whereToFind": [
           { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including Inked, Sapphire, and Topaz cosmetic variants." },
@@ -58,9 +58,9 @@
         "handleMaterial": "6AL-4V Titanium",
         "handleFinish": "Stonewash",
         "variants": [
-          { "variantSlug": "trainer",  "type": "trainer", "label": "Trainer",       "msrp": "474.99", "bladeStyle": "Trainer", "bladeMaterial": "410 Stainless Steel", "bladeFinish": "Stonewash" },
-          { "variantSlug": "tanto",    "type": "live",    "label": "Tanto",         "msrp": "750",    "bladeStyle": "Tanto",   "bladeMaterial": "S35VN",               "bladeFinish": "Stonewash" },
-          { "variantSlug": "bowie",    "type": "live",    "label": "Bowie",         "msrp": "750",    "bladeStyle": "Bowie",   "bladeMaterial": "S35VN",               "bladeFinish": "Stonewash" }
+          { "variantSlug": "trainer",  "type": "trainer", "label": "Trainer", "msrp": "474.99", "bladeStyle": "Trainer" },
+          { "variantSlug": "tanto",    "type": "live",    "label": "Tanto",   "msrp": "750",    "bladeStyle": "Tanto" },
+          { "variantSlug": "bowie",    "type": "live",    "label": "Bowie",   "msrp": "750",    "bladeStyle": "Bowie" }
         ],
         "whereToFind": [
           { "label": "Squid Industries",        "url": "https://www.squidindustries.co", "type": "official",  "note": "Trainer version, available directly from the maker." },
@@ -95,7 +95,7 @@
         "handleMaterial": "CPVC Plastic",
         "handleFinish": "Plain",
         "variants": [
-          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "49.99", "bladeStyle": "Trainer", "bladeMaterial": "CPVC Plastic", "bladeFinish": "Plain" }
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "49.99", "bladeStyle": "Trainer" }
         ],
         "whereToFind": [
           { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including U, B, WH, and metal (Squiddy-AL) variants." },

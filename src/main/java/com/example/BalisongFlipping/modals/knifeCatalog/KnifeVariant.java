@@ -35,9 +35,6 @@ public class KnifeVariant {
     @Enumerated(EnumType.STRING)
     private BladeMaterial bladeMaterial;
 
-    @Enumerated(EnumType.STRING)
-    private BladeFinish bladeFinish;
-
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
@@ -64,9 +61,6 @@ public class KnifeVariant {
 
     public BladeMaterial getBladeMaterial() { return bladeMaterial; }
     public void setBladeMaterial(BladeMaterial bladeMaterial) { this.bladeMaterial = bladeMaterial; }
-
-    public BladeFinish getBladeFinish() { return bladeFinish; }
-    public void setBladeFinish(BladeFinish bladeFinish) { this.bladeFinish = bladeFinish; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

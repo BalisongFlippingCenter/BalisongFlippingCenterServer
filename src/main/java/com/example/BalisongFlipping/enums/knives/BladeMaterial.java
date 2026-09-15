@@ -21,6 +21,10 @@ public enum BladeMaterial {
     AEB_L,
     STEEL_12C27,
     STEEL_440C,
+    CPVC,
+    ACETAL,
+    ULTEM,
+    HDPE,
     OTHER,
     UNKNOWN
 }
