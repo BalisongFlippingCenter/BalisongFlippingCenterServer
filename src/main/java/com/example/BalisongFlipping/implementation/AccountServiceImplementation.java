@@ -436,6 +436,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     // -------------------------------------------------------------------------
 
     @Override
+    @Transactional
     public void requestEmailChange(String accountId) throws Exception {
         User user = getUser(accountId);
         emailTokenRepository.deleteByOwner_Id(user.getId());
@@ -476,6 +477,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     }
 
     @Override
+    @Transactional
     public void requestPasswordChange(String accountId) throws Exception {
         User user = getUser(accountId);
         emailTokenRepository.deleteByOwner_Id(user.getId());
