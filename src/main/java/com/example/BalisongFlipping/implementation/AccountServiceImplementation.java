@@ -129,9 +129,15 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
     @Override
     public UserDto getSelf() throws Exception {
+        // Re-fetch rather than trust the SecurityContext principal directly: that object
+        // was loaded by JwtAuthFilter in its own short-lived query, which has already closed
+        // by the time this runs, so its lazy collections (likedPostIds, likedCommentIds) can't
+        // be initialized -- toUserDto() would throw LazyInitializationException serializing them.
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Account currentAccount = (Account) authentication.getPrincipal();
-        return toUserDto(currentAccount);
+        Account freshAccount = accountRepository.findById(currentAccount.getId())
+                .orElseThrow(() -> new Exception("Account not found."));
+        return toUserDto(freshAccount);
     }
 
     @Override

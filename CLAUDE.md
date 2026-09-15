@@ -152,10 +152,10 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 ### Notifications (`/notifications/**` — all auth required)
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/notifications/me` | Paginated — `unreadOnly`, `page`, `size` |
-| GET | `/notifications/me/unread-count` | `{ count }` |
+| GET | `/notifications` | Paginated — `unreadOnly`, `page`, `size` |
+| GET | `/notifications/unread-count` | Raw number, not wrapped (e.g. `0`, not `{count: 0}`) |
 | PATCH | `/notifications/{id}/read` | Mark one read |
-| PATCH | `/notifications/me/read-all` | Mark all read |
+| PATCH | `/notifications/read-all` | Mark all read |
 
 ---
 
@@ -234,8 +234,6 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ## Known Gaps / To Do
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
-- **`/notifications/me/unread-count` returns an unexplained 403** even for a valid, non-moderated account — found while testing account enforcement, not yet investigated; not related to the ban/suspend/mute logic (a different endpoint with the same token and account works fine).
-- **`GET /accounts/me` intermittently 500s** serializing `User.likedPostIds` — `failed to lazily initialize a collection of role ... could not initialize proxy - no Session`, despite `spring.jpa.open-in-view` being on. Also found incidentally while testing; not investigated.
 
 ---
 
