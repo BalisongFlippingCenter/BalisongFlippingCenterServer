@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +40,18 @@ public class Account implements UserDetails {
     private Date lastLogin;
     private Boolean emailVerified;
 
+    private boolean banned;
+    @Column(columnDefinition = "TEXT")
+    private String banReason;
+
+    private Instant suspendedUntil;
+    @Column(columnDefinition = "TEXT")
+    private String suspendReason;
+
+    private Instant mutedUntil;
+    @Column(columnDefinition = "TEXT")
+    private String muteReason;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -59,6 +72,27 @@ public class Account implements UserDetails {
     public Boolean getEmailVerified() { return emailVerified; }
     public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
 
+    public boolean isBanned() { return banned; }
+    public void setBanned(boolean banned) { this.banned = banned; }
+
+    public String getBanReason() { return banReason; }
+    public void setBanReason(String banReason) { this.banReason = banReason; }
+
+    public Instant getSuspendedUntil() { return suspendedUntil; }
+    public void setSuspendedUntil(Instant suspendedUntil) { this.suspendedUntil = suspendedUntil; }
+
+    public String getSuspendReason() { return suspendReason; }
+    public void setSuspendReason(String suspendReason) { this.suspendReason = suspendReason; }
+
+    public Instant getMutedUntil() { return mutedUntil; }
+    public void setMutedUntil(Instant mutedUntil) { this.mutedUntil = mutedUntil; }
+
+    public String getMuteReason() { return muteReason; }
+    public void setMuteReason(String muteReason) { this.muteReason = muteReason; }
+
+    public boolean isCurrentlySuspended() { return suspendedUntil != null && suspendedUntil.isAfter(Instant.now()); }
+    public boolean isCurrentlyMuted() { return mutedUntil != null && mutedUntil.isAfter(Instant.now()); }
+
     @Override
     public String getPassword() { return password; }
 
@@ -75,11 +109,11 @@ public class Account implements UserDetails {
     public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() { return !isCurrentlySuspended(); }
 
     @Override
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return !banned; }
 }

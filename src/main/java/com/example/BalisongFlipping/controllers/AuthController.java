@@ -8,6 +8,8 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
 import com.example.BalisongFlipping.services.*;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.client.HttpClientErrorException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -212,6 +214,10 @@ public class AuthController {
             }
 
             return new ResponseEntity<>(buildLoginResponse(authenticatedUser, response), HttpStatus.OK);
+        }
+        catch (DisabledException | LockedException e) {
+            // banned / suspended -- message already carries the reason and (for suspensions) the expiry
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> {}", e.getMessage(), e);

@@ -136,6 +136,17 @@ Auth-required:
 
 `ModerationService` auto-resolves `PROFILE` reports for `INAPPROPRIATE_NAME`/`INAPPROPRIATE_BIO`: if the profanity filter confirms it, the name is reset / bio cleared automatically, the user is emailed + notified, and the report is closed without human review. Everything else sits `PENDING` for an admin. `CONVERSATION`/`MESSAGE` reports currently skip reason-set validation (no `POST_REASONS`-equivalent set defined for them yet).
 
+### Account Enforcement (`/admin/accounts/**` — all `ADMIN`)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/admin/accounts/search?q=` | Search by email, displayName, or identifierCode |
+| GET | `/admin/accounts/{id}` | One account's moderation status |
+| POST | `/admin/accounts/{id}/ban` \| `/unban` | `{reason}` — permanent login lockout |
+| POST | `/admin/accounts/{id}/suspend` \| `/unsuspend` | `{reason, until}` (ISO-8601 instant) — temporary login lockout, auto-lifts at `until` |
+| POST | `/admin/accounts/{id}/mute` \| `/unmute` | `{reason, until}` — blocks creating posts/comments only; login and browsing are unaffected |
+
+Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenticate` checks before password verification, throwing `DisabledException`/`LockedException` with the reason and, for suspensions, the expiry — caught in `AuthController` and returned as `409`), and on every subsequent request (`JwtAuthFilter` re-checks `isEnabled()`/`isAccountNonLocked()` on the freshly-loaded account before honoring an otherwise-valid access token, so revocation is immediate rather than waiting for the token to expire — returns `403`). Mute is checked at the top of `PostService.createPost` and `CommentService.createComment` only. Admin accounts can never be targeted (`AdminAccountService.requireModerable` rejects with `409`). Frontend: `AdminAccountsPage` (`/admin/accounts`, linked from the sidebar) — search, then expand a result to ban/suspend/mute with a reason (and duration for the latter two).
+
 **Becoming an admin**: `role` is a plain string on `Account` (`"USER"` by default), turned into `ROLE_<value>` for Spring Security, re-derived from the DB on every request (not cached in the JWT — a role change takes effect on the very next request). There's no promote-another-admin endpoint yet. The first admin is set via `AdminBootstrapRunner` (`config/`): it checks on startup **and every 3 minutes thereafter** (`@Scheduled`, requires `@EnableScheduling` on `BalisongFlippingApplication`) whether `ADMIN_BOOTSTRAP_EMAIL` is set and no account currently has `role=ADMIN` — if so, it promotes the matching account. The recurring check exists so a wiped/restored DB self-heals admin access (register the account again, wait up to 3 min) without needing a backend restart. It's a no-op forever once any admin exists, so it's safe to leave enabled — treat it as a "restore my admin access" safety net, not a way to add a second admin later.
 
 ### Notifications (`/notifications/**` — all auth required)
@@ -223,7 +234,8 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ## Known Gaps / To Do
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
-- **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
+- **`/notifications/me/unread-count` returns an unexplained 403** even for a valid, non-moderated account — found while testing account enforcement, not yet investigated; not related to the ban/suspend/mute logic (a different endpoint with the same token and account works fine).
+- **`GET /accounts/me` intermittently 500s** serializing `User.likedPostIds` — `failed to lazily initialize a collection of role ... could not initialize proxy - no Session`, despite `spring.jpa.open-in-view` being on. Also found incidentally while testing; not investigated.
 
 ---
 
