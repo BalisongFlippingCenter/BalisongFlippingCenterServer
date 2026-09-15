@@ -4,6 +4,7 @@ import com.example.BalisongFlipping.dtos.commentDtos.CommentAuthorDto;
 import com.example.BalisongFlipping.dtos.commentDtos.CommentResponseDto;
 import com.example.BalisongFlipping.enums.notifications.NotificationType;
 import com.example.BalisongFlipping.enums.reports.TargetType;
+import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.comments.Comment;
 import com.example.BalisongFlipping.modals.comments.CommentLike;
@@ -56,6 +57,13 @@ public class CommentService {
 
     @Transactional
     public CommentResponseDto createComment(Long postId, String accountId, String content, Long parentCommentId) throws Exception {
+        Account author = accountRepository.findById(Long.parseLong(accountId)).orElseThrow();
+        if (author.isCurrentlyMuted()) {
+            String reason = author.getMuteReason();
+            throw new Exception("You are muted until " + author.getMutedUntil() + "."
+                    + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""));
+        }
+
         if (content == null || content.isBlank())
             throw new Exception("Comment content cannot be empty.");
 

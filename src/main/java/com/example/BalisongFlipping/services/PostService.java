@@ -379,6 +379,13 @@ public class PostService {
     // -------------------------------------------------------------------------
 
     public PostWrapper createPost(String accountId, CreatePostRequestDto dto) throws Exception {
+        Account author = accountRepository.findById(Long.parseLong(accountId)).orElseThrow();
+        if (author.isCurrentlyMuted()) {
+            String reason = author.getMuteReason();
+            throw new Exception("You are muted until " + author.getMutedUntil() + "."
+                    + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""));
+        }
+
         if (dto.postType() == null || dto.postType().isBlank()) {
             throw new Exception("postType is required.");
         }

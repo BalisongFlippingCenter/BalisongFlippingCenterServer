@@ -56,6 +56,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userEmail != null && authentication == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
+                // re-checked on every request (not just at login) so a ban/suspension takes
+                // effect immediately instead of waiting for the access token to expire
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write(!userDetails.isEnabled()
+                            ? "Your account has been banned."
+                            : "Your account is currently suspended.");
+                    return;
+                }
+
                 if (jwtService.isAccessTokenValid(accessToken, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,

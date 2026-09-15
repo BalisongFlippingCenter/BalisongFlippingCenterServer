@@ -12,6 +12,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -208,6 +210,22 @@ public class AuthServiceImplementation implements AuthService {
      */
     @Override
     public Account authenticate(LoginAccountDto loginInfo) {
+        // checked before password verification (same order Spring Security's own
+        // UserDetails checks would run in) so the message can include the reason/expiry
+        // instead of Spring's generic "account locked"/"account disabled" text
+        accountRepository.findAccountByEmail(loginInfo.email()).ifPresent(account -> {
+            if (account.isBanned()) {
+                String reason = account.getBanReason();
+                throw new DisabledException("Your account has been banned."
+                        + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""));
+            }
+            if (account.isCurrentlySuspended()) {
+                String reason = account.getSuspendReason();
+                throw new LockedException("Your account is suspended until " + account.getSuspendedUntil() + "."
+                        + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""));
+            }
+        });
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginInfo.email(),
