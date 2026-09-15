@@ -93,6 +93,12 @@ Auth-required (`/accounts/me/**`):
 | POST | `/accounts/me/hide-account` | Toggle isHidden |
 | POST | `/accounts/me/reset-account` | Wipe bio/links/images/knives/posts |
 | DELETE | `/accounts/me` | Delete account |
+| POST | `/accounts/me/request-email-change` | Emails a 6-digit code to the *current* email |
+| POST | `/accounts/me/confirm-email-change` | `{ code, newEmail }` — validates the code, then applies the new email |
+| POST | `/accounts/me/request-password-change` | Emails a 6-digit code to the account's email |
+| POST | `/accounts/me/confirm-password-change` | `{ code, newPassword }` — validates the code, then applies the new password |
+
+Both change flows reuse the `EmailVerificationToken` mechanism (10-min expiry) — `request*` deletes any existing token for the account before issuing a new one, so `request*` must be `@Transactional` (a derived-delete repository call outside a transaction throws "No EntityManager with actual transaction available"; this bit both request methods until fixed). Frontend: `ProfileConfigurationChangeEmailPage`/`ChangePasswordPage` (`/configure/email`, `/configure/password`), linked from the Account section of Settings.
 
 ### Posts (`/posts/**`)
 Public (`/posts/any/**`):
@@ -215,7 +221,6 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ---
 
 ## Known Gaps / To Do
-- **Change email / Change password**: service methods exist but deferred
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
 - **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
