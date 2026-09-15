@@ -213,7 +213,6 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ## Known Gaps / To Do
 - **Email verification**: entity + service exist but not wired into registration flow
 - **Change email / Change password**: service methods exist but deferred (require email verification)
-- **Docker healthcheck false-negative**: the `server` container's healthcheck (`CMD curl -f http://localhost:8080/api/actuator/health`) always reports `unhealthy` because `eclipse-temurin:22-jre-alpine` has no `curl` installed — the app itself is fine, `docker ps` just always shows it unhealthy. Fix: add `RUN apk add --no-cache curl` to the `Dockerfile`.
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
 - **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
