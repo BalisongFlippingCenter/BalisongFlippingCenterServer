@@ -157,6 +157,26 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 | PATCH | `/notifications/{id}/read` | Mark one read |
 | PATCH | `/notifications/read-all` | Mark all read |
 
+### Catalog (`/catalog/**` public, `/admin/catalog/**` all `ADMIN`)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/catalog/any/knives?search=` | List/search knives (`KnifeSummaryDto[]`) |
+| GET | `/catalog/any/knives/{slug}` | Full detail (`KnifeDetailDto` — versions → variants) |
+| GET | `/catalog/any/makers` | List makers |
+| GET | `/catalog/any/makers/{slug}` | Full maker detail incl. its knives |
+| POST | `/admin/catalog/upload-url` | Presigned S3 PUT URL for a cover or variant image |
+| POST | `/admin/catalog/import` | Bulk upsert-by-slug — `{makers?, knives?}`, same shape as the seed JSON |
+| POST/PUT/DELETE | `/admin/catalog/makers[/{slug}]` | Maker CRUD |
+| POST/PUT/DELETE | `/admin/catalog/knives[/{slug}]` | Knife CRUD — body is a full `KnifeSeedDto` (knife → versions → variants), same shape `/import` takes for one knife |
+
+**Shape**: `Knife` → `KnifeVersion` (one per real hardware/material revision, e.g. V3 vs a titanium remake — cosmetic-only colorway SKUs are *not* separate versions) → `KnifeVariant` (one per blade type offered under that version: `TRAINER` or a `LIVE_BLADE` style like Tanto/Bowie/Weehawk).
+
+**Required fields** (`CatalogSeedService.validateRequiredFields`, shared by create/update/import — 400 `CatalogValidationException` listing exactly what's missing): every version needs `overallLength`, `weight`, `pivotSystem`, `latchType`, `pinSystem`, `handleConstruction`, `handleMaterial`, `handleFinish`; every variant needs `msrp`; `LIVE_BLADE` variants additionally need `bladeStyle` and `bladeMaterial` (optional-but-settable for `TRAINER`, since a trainer's steel is generic and not a meaningful spec). `bladeFinish` is not tracked anywhere on the catalog side — cosmetic-only, deliberately dropped (migration V24); this is an info page, not a store, so finish doesn't carry the way material/style do. Plastic handle/blade materials get specific values (`CPVC`, `ACETAL`, `ULTEM`, `HDPE`) alongside the generic `PLASTIC`, mirroring how aluminum has `ALUMINIUM_6061`/`ALUMINIUM_7075` alongside generic `ALUMINIUM` — added after the Squiddy line (4 different plastics across 6 catalog entries) exposed the generic bucket as too coarse.
+
+**Cover/variant images**: direct-to-S3 upload flow exists and works (`/admin/catalog/upload-url` + `S3Presigner`), but no catalog entries have real images yet — sourcing was put on hold pending copyright: rehosting manufacturer/retailer product photos onto the app's own S3 bucket is a real exposure for a public platform. Options identified but not pursued: ask makers for press-kit images, use photos of knives actually owned, or eventually backfill from user-submitted post photos.
+
+**Squid Industries** (`squid-industries` maker) is the only maker with real catalog entries so far — 10 knives: Krake Raken + Titanium Krake Raken (each deeply spec-verified against official + retailer sources, multiple correction passes), Squiddy/-B/-U/-WH/-A/-XL (same), Squidtrainer and Mako (only lightly verified during the original bulk import — still need the same fact-by-fact re-verification pass the others got).
+
 ---
 
 ## WebSocket (STOMP)
