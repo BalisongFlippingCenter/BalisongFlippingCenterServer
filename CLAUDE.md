@@ -217,7 +217,6 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 - **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
 - **Account-level enforcement**: no ban/suspend/mute exists — `Account.isEnabled()`/`isAccountNonLocked()` are hardcoded `true`. Deferred; see Reports & Moderation above for what does exist (report queue + profile auto-moderation).
-- **Admin UI**: reports queue above has no frontend yet — planned for `BalisongFlippingCenterWeb`, not this repo.
 
 ---
 
