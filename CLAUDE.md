@@ -160,7 +160,7 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 ### Catalog (`/catalog/**` public, `/admin/catalog/**` all `ADMIN`)
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/catalog/any/knives?search=` | List/search knives (`KnifeSummaryDto[]`) |
+| GET | `/catalog/any/knives?search=&bladeMaterial=&handleMaterial=&pivotSystem=&maxPrice=` | List/search/filter knives (`KnifeSummaryDto[]`) — all params optional and combinable; enum params match by name, case-insensitive |
 | GET | `/catalog/any/knives/{slug}` | Full detail (`KnifeDetailDto` — versions → variants) |
 | GET | `/catalog/any/makers` | List makers |
 | GET | `/catalog/any/makers/{slug}` | Full maker detail incl. its knives |
@@ -175,7 +175,20 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 
 **Cover/variant images**: direct-to-S3 upload flow exists and works (`/admin/catalog/upload-url` + `S3Presigner`), but no catalog entries have real images yet — sourcing was put on hold pending copyright: rehosting manufacturer/retailer product photos onto the app's own S3 bucket is a real exposure for a public platform. Options identified but not pursued: ask makers for press-kit images, use photos of knives actually owned, or eventually backfill from user-submitted post photos.
 
-**Squid Industries** (`squid-industries` maker) is the only maker with real catalog entries so far — 10 knives: Krake Raken + Titanium Krake Raken (each deeply spec-verified against official + retailer sources, multiple correction passes), Squiddy/-B/-U/-WH/-A/-XL (same), Squidtrainer and Mako (only lightly verified during the original bulk import — still need the same fact-by-fact re-verification pass the others got).
+**Squid Industries** (`squid-industries` maker) is the only maker with real catalog entries so far — 11 knives: Krake Raken + Titanium Krake Raken, Squiddy/-B/-U/-WH/-A/-XL, Mako, Squidtrainer, and Tsunami — all now spec-verified against official squidindustries.co/squidindustriesknives.co sources (2026-09-16 pass corrected Tsunami's overall length/weight to the live-blade spec, added the required `bladeMaterial` — S35VN — that was missing from both its live variants and blocking `CatalogSeedRunner` entirely, and added Squidtrainer as a new entry; Mako's existing data checked out unchanged).
+
+**Seed file vs. live catalog**: `seed-data/knives.json` is not a complete mirror of the live catalog — `283c946` deliberately dropped Krake Raken from it once that knife existed only via direct `/admin/catalog/import` calls, and the 5 Squiddy color variants (-B/-U/-WH/-A/-XL) were never added to this file either. If the DB is ever wiped, only the knives actually in this file (currently Mako, Squidtrainer, Tsunami, base Squiddy) get restored by `CatalogSeedRunner` — the rest would need re-importing from whatever payload was last used against `/admin/catalog/import`, which isn't checked in anywhere. Worth eventually exporting the live DB back into this file so a full reseed is actually possible.
+
+---
+
+## AI Chat (Latch)
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/ai/chat` | `X-Client-Id`/`X-Client-Key` (client credential, not JWT) + optional `Authorization` | Relays to the separate `BalisongFlippingCenterAIPython` service and streams back a `text/plain` reply |
+
+`AiChatController`/`AiChatService` validate the caller's client credentials (`ai.clients.website.key` / `ai.clients.discord.key`, one per known frontend/bot client), rate-limit by `sessionId` (`ai.rate-limit.max-requests-per-minute`, default 10/min), and forward the caller's JWT plus the frontend's `currentPath` to the AI service at `ai.service.base-url` (`AI_SERVICE_BASE_URL`, default `http://localhost:8001`) — never trusting the client-supplied JWT without it also passing normal auth internally. The call to the AI service itself carries an `X-Internal-Secret` header (`ai.service.shared-secret` / `AI_SERVICE_SHARED_SECRET`) that the AI service verifies, so it only accepts traffic relayed through this backend, not direct hits; the check is skipped when the secret is unset, which is only true in local dev.
+
+The AI service ("Latch") is a FastAPI microservice (separate repo, separate EC2 instance, own Terraform state) that calls Claude via AWS Bedrock and does real tool-calling back against this backend's own public API (`/posts/any`, `/accounts/any/**`, `/catalog/any/**`, `/reports`) to answer questions — it never answers from model memory about site-specific data. See that repo's README for its own architecture; there's nothing else to run or configure on this side beyond the `ai.*`/`AI_*` properties above.
 
 ---
 
