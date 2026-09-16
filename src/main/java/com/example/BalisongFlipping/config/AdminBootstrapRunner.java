@@ -9,6 +9,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 public class AdminBootstrapRunner implements CommandLineRunner {
 
@@ -37,7 +39,21 @@ public class AdminBootstrapRunner implements CommandLineRunner {
 
     private void tryBootstrap() {
         if (bootstrapEmail == null || bootstrapEmail.isBlank()) return;
-        if (accountRepository.existsByRole("ADMIN")) return;
+
+        Optional<Account> existingAdmin = accountRepository.findFirstByRole("ADMIN");
+        if (existingAdmin.isPresent()) {
+            // This runner never demotes an existing admin -- if ADMIN_BOOTSTRAP_EMAIL has drifted
+            // from whoever actually holds the role (e.g. a placeholder value never corrected, or
+            // the role changed by hand), that drift is otherwise completely silent. Surfacing it
+            // here is what would have caught this incident: an admin login test, not a config diff.
+            if (!existingAdmin.get().getEmail().equalsIgnoreCase(bootstrapEmail)) {
+                log.warn("ADMIN_BOOTSTRAP_EMAIL is set to '{}' but the current ADMIN is '{}' -- " +
+                                "if that's not intentional, ADMIN_BOOTSTRAP_EMAIL is likely misconfigured. " +
+                                "This runner never auto-demotes an existing admin, so fixing the value alone won't correct it.",
+                        bootstrapEmail, existingAdmin.get().getEmail());
+            }
+            return;
+        }
 
         accountRepository.findAccountByEmail(bootstrapEmail).ifPresent(account -> {
             account.setRole("ADMIN");
