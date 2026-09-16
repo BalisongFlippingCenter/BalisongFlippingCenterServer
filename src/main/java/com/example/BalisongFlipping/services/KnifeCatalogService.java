@@ -31,10 +31,55 @@ public class KnifeCatalogService {
     }
 
     public List<KnifeSummaryDto> searchKnives(String search) {
+        return searchKnives(search, null, null, null, null);
+    }
+
+    public List<KnifeSummaryDto> searchKnives(String search, String bladeMaterial, String handleMaterial, String pivotSystem, Double maxPrice) {
         List<Knife> knives = (search == null || search.isBlank())
                 ? knifeRepository.findAll()
                 : knifeRepository.findByNameContainingIgnoreCaseOrMakerNameContainingIgnoreCase(search, search);
-        return knives.stream().map(this::toSummary).collect(Collectors.toList());
+
+        return knives.stream()
+                .filter(k -> matchesBladeMaterial(k, bladeMaterial))
+                .filter(k -> matchesHandleMaterial(k, handleMaterial))
+                .filter(k -> matchesPivotSystem(k, pivotSystem))
+                .filter(k -> matchesMaxPrice(k, maxPrice))
+                .map(this::toSummary)
+                .collect(Collectors.toList());
+    }
+
+    private boolean matchesBladeMaterial(Knife knife, String bladeMaterial) {
+        if (bladeMaterial == null || bladeMaterial.isBlank()) return true;
+        return knife.getVersions().stream()
+                .flatMap(v -> v.getVariants().stream())
+                .map(KnifeVariant::getBladeMaterial)
+                .filter(Objects::nonNull)
+                .anyMatch(m -> m.name().equalsIgnoreCase(bladeMaterial));
+    }
+
+    private boolean matchesHandleMaterial(Knife knife, String handleMaterial) {
+        if (handleMaterial == null || handleMaterial.isBlank()) return true;
+        return knife.getVersions().stream()
+                .map(KnifeVersion::getHandleMaterial)
+                .filter(Objects::nonNull)
+                .anyMatch(m -> m.name().equalsIgnoreCase(handleMaterial));
+    }
+
+    private boolean matchesPivotSystem(Knife knife, String pivotSystem) {
+        if (pivotSystem == null || pivotSystem.isBlank()) return true;
+        return knife.getVersions().stream()
+                .map(KnifeVersion::getPivotSystem)
+                .filter(Objects::nonNull)
+                .anyMatch(p -> p.name().equalsIgnoreCase(pivotSystem));
+    }
+
+    private boolean matchesMaxPrice(Knife knife, Double maxPrice) {
+        if (maxPrice == null) return true;
+        return knife.getVersions().stream()
+                .flatMap(v -> v.getVariants().stream())
+                .map(KnifeVariant::getMsrp)
+                .filter(Objects::nonNull)
+                .anyMatch(msrp -> msrp <= maxPrice);
     }
 
     public KnifeDetailDto getKnifeBySlug(String slug) {

@@ -34,6 +34,40 @@
     ]
   },
   {
+    "slug": "squid-industries-squidtrainer",
+    "name": "Squidtrainer",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$174.99–$214.99",
+    "versions": [
+      {
+        "versionSlug": "v4",
+        "version": "v4",
+        "discontinued": false,
+        "releaseYear": 2022,
+        "description": "The Squidtrainer is Squid Industries' original balisong trainer, first released in 2015 and the model that launched the brand. The V4 revision, unveiled in November 2022, brought a machined handle texture pattern, press-fit stainless steel rods, and 416 stainless steel bushings tuned to each blade for tighter tolerances and zero blade tap.",
+        "overallLength": "10",
+        "weight": "4.40",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "6061 Aluminum",
+        "handleFinish": "Bead Blasted",
+        "variants": [
+          { "variantSlug": "standard", "type": "trainer", "label": "Squidtrainer V4", "msrp": "174.99", "bladeStyle": "Trainer" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including Inked and Topaz cosmetic variants and a build-to-order option." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
     "slug": "squid-industries-tsunami",
     "name": "Tsunami",
     "maker": "Squid Industries",
@@ -47,8 +81,8 @@
         "discontinued": false,
         "releaseYear": 2020,
         "description": "The Tsunami is Squid Industries' flagship titanium balisong, described by the maker as 'the pinnacle of flipping evolution.' It was Squid's first titanium model, featuring a bi-directional-taper chanwich handle, precision bushings, and a hidden adjustable weighting system with six relocatable weight pins for tuning balance. Each unit is CNC-machined and hand-assembled with a serialized certificate of authenticity. Live blades are sold through Squid Industries' dedicated live-blade storefront and span a wide range of finish/dress tiers, from Zirblast up to full-dress models.",
-        "overallLength": "10.125",
-        "weight": "3.82",
+        "overallLength": "10.05",
+        "weight": "4.00",
         "pivotSystem": "Bushing",
         "latchType": "Latchless",
         "pinSystem": "Hidden Zen Pin",
@@ -59,8 +93,8 @@
         "handleFinish": "Stonewash",
         "variants": [
           { "variantSlug": "trainer",  "type": "trainer", "label": "Trainer", "msrp": "474.99", "bladeStyle": "Trainer" },
-          { "variantSlug": "tanto",    "type": "live",    "label": "Tanto",   "msrp": "750",    "bladeStyle": "Tanto" },
-          { "variantSlug": "bowie",    "type": "live",    "label": "Bowie",   "msrp": "750",    "bladeStyle": "Bowie" }
+          { "variantSlug": "tanto",    "type": "live",    "label": "Tanto",   "msrp": "750",    "bladeStyle": "Tanto", "bladeMaterial": "S35VN" },
+          { "variantSlug": "bowie",    "type": "live",    "label": "Bowie",   "msrp": "750",    "bladeStyle": "Bowie", "bladeMaterial": "S35VN" }
         ],
         "whereToFind": [
           { "label": "Squid Industries",        "url": "https://www.squidindustries.co", "type": "official",  "note": "Trainer version, available directly from the maker." },

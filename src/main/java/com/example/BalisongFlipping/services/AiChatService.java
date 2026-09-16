@@ -24,6 +24,9 @@ public class AiChatService {
     @Value("${ai.service.base-url}")
     private String aiServiceBaseUrl;
 
+    @Value("${ai.service.shared-secret}")
+    private String aiServiceSharedSecret;
+
     private record PythonChatRequest(String session_id, String message, String access_token, String current_path) {}
 
     public StreamingResponseBody streamChat(String sessionId, String message, String accessToken, String currentPath) {
@@ -35,6 +38,7 @@ public class AiChatService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(aiServiceBaseUrl + "/chat/stream"))
                     .header("Content-Type", "application/json")
+                    .header("X-Internal-Secret", aiServiceSharedSecret)
                     .timeout(Duration.ofSeconds(60))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();

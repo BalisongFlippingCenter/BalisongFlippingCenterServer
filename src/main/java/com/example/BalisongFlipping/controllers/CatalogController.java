@@ -24,9 +24,15 @@ public class CatalogController {
     private KnifeCatalogService knifeCatalogService;
 
     @GetMapping("/any/knives")
-    public ResponseEntity<?> searchKnives(@RequestParam(value = "search", required = false) String search) {
+    public ResponseEntity<?> searchKnives(
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "bladeMaterial", required = false) String bladeMaterial,
+            @RequestParam(value = "handleMaterial", required = false) String handleMaterial,
+            @RequestParam(value = "pivotSystem", required = false) String pivotSystem,
+            @RequestParam(value = "maxPrice", required = false) Double maxPrice
+    ) {
         try {
-            List<KnifeSummaryDto> results = knifeCatalogService.searchKnives(search);
+            List<KnifeSummaryDto> results = knifeCatalogService.searchKnives(search, bladeMaterial, handleMaterial, pivotSystem, maxPrice);
             return new ResponseEntity<>(results, HttpStatus.OK);
         } catch (Exception e) {
             log.error("GET /catalog/any/knives?search={} -> {}", search, e.getMessage());
