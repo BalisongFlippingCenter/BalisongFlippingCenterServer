@@ -49,7 +49,7 @@ class FileControllerTest {
     void listFilesReturnsBucketContents() throws Exception {
         when(service.listFiles("knife-images")).thenReturn(List.of("a.png", "b.png"));
 
-        mockMvc.perform(get("/file/{bucketName}", "knife-images"))
+        mockMvc.perform(get("/files/{bucketName}", "knife-images"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("a.png"))
                 .andExpect(jsonPath("$[1]").value("b.png"));
@@ -59,7 +59,7 @@ class FileControllerTest {
     void uploadFileSucceeds() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "knife.png", "image/png", new byte[]{1, 2, 3});
 
-        mockMvc.perform(multipart("/file/{bucketName}/upload", "knife-images").file(file))
+        mockMvc.perform(multipart("/files/{bucketName}/upload", "knife-images").file(file))
                 .andExpect(status().isOk())
                 .andExpect(content().string("File uploaded successfully"));
 
@@ -70,7 +70,7 @@ class FileControllerTest {
     void uploadFileRejectsEmptyFile() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "empty.png", "image/png", new byte[0]);
 
-        mockMvc.perform(multipart("/file/{bucketName}/upload", "knife-images").file(file))
+        mockMvc.perform(multipart("/files/{bucketName}/upload", "knife-images").file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("File is empty"));
 
@@ -83,14 +83,14 @@ class FileControllerTest {
         stream.write(new byte[]{1, 2, 3});
         when(service.downloadFile("knife-images", "knife.png")).thenReturn(stream);
 
-        mockMvc.perform(get("/file/{bucketName}/download/{fileName}", "knife-images", "knife.png"))
+        mockMvc.perform(get("/files/{bucketName}/download/{fileName}", "knife-images", "knife.png"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"knife.png\""));
     }
 
     @Test
     void deleteFileSucceeds() throws Exception {
-        mockMvc.perform(delete("/file/{bucketName}/{fileName}", "knife-images", "knife.png"))
+        mockMvc.perform(delete("/files/{bucketName}/{fileName}", "knife-images", "knife.png"))
                 .andExpect(status().isOk());
 
         verify(service, times(1)).deleteFile("knife-images", "knife.png");
