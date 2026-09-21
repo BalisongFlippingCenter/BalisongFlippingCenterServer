@@ -1,7 +1,12 @@
 package com.example.BalisongFlipping.controllers;
 
+import com.example.BalisongFlipping.dtos.ConfirmForgotPasswordDto;
+import com.example.BalisongFlipping.dtos.ForgotPasswordDto;
+import com.example.BalisongFlipping.dtos.GoogleAuthDto;
+import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
+import com.example.BalisongFlipping.dtos.SetDisplayNameDto;
 import com.example.BalisongFlipping.dtos.UserDto;
 import com.example.BalisongFlipping.dtos.VerifyAdminLoginDto;
 import com.example.BalisongFlipping.modals.accounts.User;
@@ -18,19 +23,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -379,5 +389,160 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/refresh-token-login"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Unauthorized"));
+    }
+
+    @Test
+    void checkTokenAlwaysReturnsValid() throws Exception {
+        mockMvc.perform(get("/auth/check-token").param("token", "anything"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("token valid"));
+    }
+
+    @Test
+    void resendEmailTokenSucceeds() throws Exception {
+        mockMvc.perform(post("/auth/resend-email-token/{email}", "flipper@example.com"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Success"));
+
+        verify(authenticationService).reSendEmailToken("flipper@example.com");
+    }
+
+    @Test
+    void verifyEmailTokenSucceedsForValidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("good-token")).thenReturn(true);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "good-token"))
+                .andExpect(status().isAccepted())
+                .andExpect(content().string("Success"));
+    }
+
+    @Test
+    void verifyEmailTokenRejectsInvalidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("bad-token")).thenReturn(false);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "bad-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Verification Failed"));
+    }
+
+    @Test
+    void forgotPasswordReturnsGenericSuccessMessage() throws Exception {
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new ForgotPasswordDto("flipper@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string("If an account exists with that email, a reset code has been sent."));
+
+        verify(authenticationService).forgotPassword("flipper@example.com");
+    }
+
+    @Test
+    void forgotPasswordHidesServiceFailureBehindGenericMessage() throws Exception {
+        doThrow(new RuntimeException("No account found")).when(authenticationService).forgotPassword(anyString());
+
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new ForgotPasswordDto("nobody@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string("If an account exists with that email, a reset code has been sent."));
+    }
+
+    @Test
+    void confirmForgotPasswordSucceeds() throws Exception {
+        mockMvc.perform(post("/auth/confirm-forgot-password")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(
+                                new ConfirmForgotPasswordDto("flipper@example.com", "123456", "new-password"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Password updated successfully."));
+    }
+
+    @Test
+    void confirmForgotPasswordRejectsBadCode() throws Exception {
+        doThrow(new RuntimeException("Invalid or expired code.")).when(authenticationService).confirmForgotPassword(any());
+
+        mockMvc.perform(post("/auth/confirm-forgot-password")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(
+                                new ConfirmForgotPasswordDto("flipper@example.com", "000000", "new-password"))))
+                .andExpect(status().isConflict())
+                .andExpect(content().string("Invalid or expired code."));
+    }
+
+    @Test
+    void setDisplayNameSucceeds() throws Exception {
+        User user = verifiedUser();
+
+        when(accountService.getSelf()).thenReturn(userDto(user));
+        when(accountService.setInitialDisplayName("1", "NewName")).thenReturn(userDto(user));
+
+        mockMvc.perform(patch("/auth/display-name")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new SetDisplayNameDto("NewName"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("1"));
+    }
+
+    @Test
+    void setDisplayNameRejectsFailure() throws Exception {
+        when(accountService.getSelf()).thenReturn(userDto(verifiedUser()));
+        when(accountService.setInitialDisplayName(anyString(), anyString()))
+                .thenThrow(new RuntimeException("Display name already taken."));
+
+        mockMvc.perform(patch("/auth/display-name")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new SetDisplayNameDto("Taken"))))
+                .andExpect(status().isConflict())
+                .andExpect(content().string("Display name already taken."));
+    }
+
+    @Test
+    void googleSignInSucceeds() throws Exception {
+        User user = verifiedUser();
+
+        when(authenticationService.googleSignIn("google-access-token"))
+                .thenReturn(new GoogleSignInResult(user, true));
+        when(jwtService.generateAccessToken(user)).thenReturn("access-token-123");
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken("refresh-token-456");
+        refreshToken.setOwner(user);
+        when(refreshTokenService.createRefreshToken("flipper@example.com")).thenReturn(refreshToken);
+
+        when(collectionService.getCollection(any())).thenReturn(null);
+        when(accountService.toUserDto(user)).thenReturn(userDto(user));
+
+        mockMvc.perform(post("/auth/google")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new GoogleAuthDto("google-access-token"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token-123"))
+                .andExpect(jsonPath("$.isNewUser").value(true))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456")));
+    }
+
+    @Test
+    void googleSignInRejectsInvalidGoogleToken() throws Exception {
+        when(authenticationService.googleSignIn(anyString()))
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null));
+
+        mockMvc.perform(post("/auth/google")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new GoogleAuthDto("bad-token"))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Invalid Google access token."));
+    }
+
+    @Test
+    void googleSignInRejectsGenericFailure() throws Exception {
+        when(authenticationService.googleSignIn(anyString()))
+                .thenThrow(new RuntimeException("Something went wrong"));
+
+        mockMvc.perform(post("/auth/google")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(new GoogleAuthDto("bad-token"))))
+                .andExpect(status().isConflict())
+                .andExpect(content().string("Something went wrong"));
     }
 }
