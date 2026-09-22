@@ -45,10 +45,11 @@ BalisongFlippingCenterServer is the Spring Boot backend that powers the Balisong
 - **Media uploads** — user-uploaded images and videos stored in AWS S3
 - **Community content** — API endpoints for posts, profiles, knife collections, and community interaction
 - **Real-time messaging** — WebSocket/STOMP-based conversations with JWT auth on CONNECT
+- **AI chat proxy** (`/ai/**`) — relays chat requests to [Latch](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterAIPython), the site's AI assistant microservice, with per-client key auth (website/Discord) and a sliding-window rate limit before forwarding
 - **Swagger UI** — interactive API documentation available at `/api/swagger-ui.html`
 - **Health monitoring** — Spring Actuator endpoints for uptime and health checks
 - **Dockerized** — multi-stage Docker build for lean, production-ready images
-- **CI/CD** — separate GitHub Actions pipelines for staging (`test` branch) and production (`master`)
+- **CI/CD** — separate GitHub Actions pipelines for staging (`test` branch) and production (`master`), both gated on the test suite passing first
 
 ---
 
@@ -75,7 +76,19 @@ MAIL_PASSWORD=
 DB_USERNAME=
 DB_PASSWORD=
 ALLOWED_ORIGINS=
+AI_SERVICE_BASE_URL=
+AI_SERVICE_SHARED_SECRET=
+AI_CLIENT_KEY_WEBSITE=
+AI_CLIENT_KEY_DISCORD=
+AI_RATE_LIMIT_PER_MINUTE=
+ADMIN_BOOTSTRAP_EMAIL=
 ```
+
+- `AI_SERVICE_BASE_URL` / `AI_SERVICE_SHARED_SECRET` — where Latch is reachable and the shared secret sent as `X-Internal-Secret` on every relayed call (see the [AI service repo](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterAIPython)).
+- `AI_CLIENT_KEY_WEBSITE` / `AI_CLIENT_KEY_DISCORD` — per-caller keys the `/ai/**` proxy checks before relaying; `AI_RATE_LIMIT_PER_MINUTE` (default 10) caps requests per client in that same window.
+- `ADMIN_BOOTSTRAP_EMAIL` — the email `AdminBootstrapRunner` expects to already hold the `ADMIN` role on startup; it logs a warning if the account with this email doesn't have that role, so the seeded/intended admin doesn't silently drift.
+
+> Note: `.env.example` currently lists only the first nine of these — `AI_SERVICE_SHARED_SECRET` and `ADMIN_BOOTSTRAP_EMAIL` are real, working env vars (see `docker-compose.yaml` and `application.properties`) that just haven't been added to the example file yet.
 
 In production these are never stored in the repo or CI — they're pulled from AWS SSM Parameter Store (`/balisong/prod/*`) at container start, and S3 access there goes through the EC2 instance's IAM role rather than static keys.
 
@@ -99,6 +112,16 @@ docker-compose up
 ```
 
 The API is served on `http://localhost:8080`, under the `/api` context path.
+
+---
+
+## Testing
+
+```bash
+./mvnw test
+```
+
+493 JUnit tests across every service and controller (no separate integration DB needed — services are tested with mocked repositories). `./mvnw package` runs the same suite before packaging; the CI build check and both deploy pipelines run `./mvnw test` as a required gate before anything ships.
 
 ---
 
@@ -136,18 +159,21 @@ Schema migrations live in `src/main/resources/db/migration` (Flyway).
 
 ## CI/CD
 
-Two GitHub Actions pipelines, split by branch:
+`dev`, `test`, and `master` are all branch-protected — every change goes through a PR, and merging requires the `Build Check` status check (`./mvnw -B package`, which runs the full test suite) to pass. Direct pushes, including from repo admins, are rejected.
 
-- **`test`** (`.github/workflows/deploy-server-to-ecr.yml`) — builds the image, pushes to ECR, and deploys over SSH to the staging EC2 host. Push or merge into `test` to update staging.
-- **`master`** (`.github/workflows/deploy-server-to-prod.yml`) — builds the image, pushes to the Terraform-managed ECR repo (`balisongflippingcenter/backend/prod`), and deploys via AWS SSM `RunShellScript` (no SSH key, no long-lived AWS credentials). Authenticates to AWS via GitHub OIDC, assuming the `balisong-backend-deploy` IAM role provisioned in the [Terraform infra repo](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterTerraformProd).
+Two deploy pipelines, each with its own required test job that must pass before the build/push/deploy job runs:
 
-Promote staging to production by merging `test` into `master`.
+- **`test`** (`.github/workflows/deploy-server-to-test.yml`) — runs `./mvnw test`, then builds the image, pushes to the testing ECR repo, and deploys via AWS SSM `RunShellScript` to the staging EC2 host. Push or merge into `test` to update staging.
+- **`master`** (`.github/workflows/deploy-server-to-prod.yml`) — same test gate, then builds the image, pushes to the Terraform-managed ECR repo (`balisongflippingcenter/backend/prod`), and deploys via AWS SSM `RunShellScript` (no SSH key, no long-lived AWS credentials). Authenticates to AWS via GitHub OIDC, assuming the `balisong-backend-deploy` IAM role provisioned in the [Terraform infra repo](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterTerraformProd).
+
+Promote staging to production by merging `test` into `master`. Both deploy pipelines pull fresh secrets from AWS SSM Parameter Store (`/balisong/testing/*` or `/balisong/prod/*`) into `.env` on the target instance before restarting the container, so a newly-added SSM parameter reaches the running app on the next deploy without a manual refresh.
 
 ---
 
 ## Related
 
 - [BalisongFlippingCenterWeb](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterWeb) — React/TypeScript frontend
+- [BalisongFlippingCenterAIPython](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterAIPython) — Latch, the FastAPI AI assistant microservice
 - [BalisongFlippingCenterTerraformProd](https://github.com/BalisongFlippingCenter/BalisongFlippingCenterTerraformProd) — production AWS infrastructure (Terraform)
 
 ---
