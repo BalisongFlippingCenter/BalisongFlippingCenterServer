@@ -67,4 +67,24 @@ class AiChatServiceTest {
         assertThrows(IOException.class, () -> body.writeTo(new ByteArrayOutputStream()));
         assertTrue(Thread.interrupted());
     }
+
+    @Test
+    void streamChatFlushesEachChunkAsItArrives() throws Exception {
+        byte[] payload = "x".repeat(2500).getBytes();
+        when(httpResponse.body()).thenReturn(new ByteArrayInputStream(payload));
+        org.mockito.Mockito.doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        int[] flushCount = {0};
+        ByteArrayOutputStream out = new ByteArrayOutputStream() {
+            @Override
+            public void flush() {
+                flushCount[0]++;
+            }
+        };
+
+        aiChatService.streamChat("session-1", "Hi", "access-token", "/chat").writeTo(out);
+
+        assertEquals(2500, out.size());
+        assertEquals(3, flushCount[0]);
+    }
 }
