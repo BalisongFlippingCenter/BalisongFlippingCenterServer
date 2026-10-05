@@ -52,7 +52,12 @@ public class AiChatService {
             }
 
             try (InputStream in = response.body()) {
-                in.transferTo(outputStream);
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                    outputStream.flush();
+                }
             }
         };
     }
