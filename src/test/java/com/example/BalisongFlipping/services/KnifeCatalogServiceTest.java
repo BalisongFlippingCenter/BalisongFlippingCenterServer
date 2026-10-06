@@ -252,6 +252,21 @@ class KnifeCatalogServiceTest {
     }
 
     @Test
+    void toSummaryFormatsPriceRangeInUsFormatRegardlessOfServerLocale() {
+        Knife k = knife("tsunami", "Tsunami", maker("squid", "Squid"), List.of(
+                version(null, null, 2020, false, List.of(variant(null, null, 474.99), variant(null, null, 1800.0)))));
+        when(knifeRepository.findBySlug("tsunami")).thenReturn(Optional.of(k));
+
+        java.util.Locale original = java.util.Locale.getDefault();
+        java.util.Locale.setDefault(java.util.Locale.GERMANY);
+        try {
+            assertEquals("$475–$1,800", knifeCatalogService.getKnifeBySlug("tsunami").priceRangeSummary());
+        } finally {
+            java.util.Locale.setDefault(original);
+        }
+    }
+
+    @Test
     void toSummaryReturnsNullPriceRangeWhenNoVariants() {
         Knife k = knife("mako", "Mako", maker("squid", "Squid"), List.of(version(null, null, 2020, false, List.of())));
         when(knifeRepository.findBySlug("mako")).thenReturn(Optional.of(k));
