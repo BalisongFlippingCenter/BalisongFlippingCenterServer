@@ -137,5 +137,458 @@
         ]
       }
     ]
+  },
+  {
+    "slug": "squid-industries-krake-raken",
+    "name": "Krake Raken",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto / Bowie / Weehawk",
+    "priceRange": "$219.99 (trainer) / $265 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "v3",
+        "version": "V3",
+        "discontinued": false,
+        "releaseYear": 2023,
+        "description": "The Krake Raken is Squid Industries' mid-range aluminum flipper and one of its best-selling models, offered as both a trainer and a live blade. The V3 uses high-strength 7075 T6511 aluminum channel handles in a zen pin configuration, a precision-tuned bushing system, rounded tapered handles, and side milling with jimping for grip. Live blades are AEB-L stainless with a satin finish in Tanto, Bowie, and Weehawk profiles (the Weehawk runs slightly longer at 10.3\" overall); the trainer uses a cryo-hardened 410 stainless blade. It can be upgraded with the Squid Industries Anchor.",
+        "overallLength": "10.05",
+        "weight": "4.31",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "219.99", "bladeStyle": "Trainer" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "265",    "bladeStyle": "Tanto",   "bladeMaterial": "AEB-L" },
+          { "variantSlug": "bowie",   "type": "live",    "label": "Bowie",   "msrp": "265",    "bladeStyle": "Bowie",   "bladeMaterial": "AEB-L" },
+          { "variantSlug": "weehawk", "type": "live",    "label": "Weehawk", "msrp": "265",    "bladeStyle": "Weehawk", "bladeMaterial": "AEB-L" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",        "url": "https://www.squidindustries.co",   "type": "official",  "note": "Trainer version, including Inked, Sapphire, Topaz, and seasonal cosmetic variants and a build-to-order option." },
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Live-blade versions, sold through the maker's dedicated live-blade storefront, including Inked, Sapphire, Zenith, and Damascus editions." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-titanium-krake-raken",
+    "name": "Titanium Krake Raken",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto / Bowie / Weehawk",
+    "priceRange": "$365 (trainer) / $410–$440 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": false,
+        "releaseYear": 2024,
+        "description": "The Titanium Krake Raken reworks the Krake Raken in 6AL-4V titanium with sandwich-construction handles, hidden zen pins, and a 7075 aluminum modular weight pin system for tuning balance. It retains the precision bushing pivot and adds jimping for grip during ladder tricks. Live blades are AEB-L stainless in Tanto, Bowie, and Weehawk profiles with a hand-rubbed satin finish and blue anodized titanium hardware; the trainer uses a 410 stainless blade with a stonewashed finish.",
+        "overallLength": "10.00",
+        "weight": "4.19",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Hidden Zen Pin",
+        "hasModularBalance": true,
+        "balanceValue": "7075 aluminum weight pin system",
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "6AL-4V Titanium",
+        "handleFinish": "Satin",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "365",  "bladeStyle": "Trainer" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "410",  "bladeStyle": "Tanto",   "bladeMaterial": "AEB-L" },
+          { "variantSlug": "bowie",   "type": "live",    "label": "Bowie",   "msrp": "410",  "bladeStyle": "Bowie",   "bladeMaterial": "AEB-L" },
+          { "variantSlug": "weehawk", "type": "live",    "label": "Weehawk", "msrp": "410",  "bladeStyle": "Weehawk", "bladeMaterial": "AEB-L" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",        "url": "https://www.squidindustries.co",   "type": "official",  "note": "Trainer version, in stonewash or zirblast finishes." },
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Live-blade versions in satin and zirblast finishes, plus etched and Damascus editions." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Frequently sells out — check BST communities, eBay, and Reddit r/balisong for used listings." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-nautilus",
+    "name": "Nautilus",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto",
+    "priceRange": "$239.99 (trainer) / $280–$320 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "v2",
+        "version": "V2",
+        "discontinued": false,
+        "releaseYear": 2022,
+        "description": "The Nautilus pairs 7075 T6511 aluminum channel liner handles with G-10 fiberglass laminate overlays (carbon fiber on some editions) for added grip and durability. It uses a quiet tang pin system for nearly silent flipping, a finely tuned bushing pivot for minimal handle play, tapered handles, a chamfered spine, and jimping for ladder tricks. The V2 trainer carries a 440C blade with a satin finish; the live Tanto uses 440C heat-treated stainless with a zirblast finish. Interchangeable Chroma Scales are sold separately.",
+        "overallLength": "10",
+        "weight": "3.48",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Tang Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "G-10 / 7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "239.99", "bladeStyle": "Trainer", "bladeMaterial": "440C" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",   "msrp": "280",    "bladeStyle": "Tanto",   "bladeMaterial": "440C" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",        "url": "https://www.squidindustries.co",   "type": "official",  "note": "Trainer version, including carbon fiber, marble, Inked, Sapphire, and seasonal editions and a build-to-order option." },
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Live-blade Tanto, with G-10 or carbon fiber scales." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-madko",
+    "name": "Madko",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto",
+    "priceRange": "$399.99 (trainer) / $500 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": false,
+        "releaseYear": 2023,
+        "description": "The Madko is a titanium take on the Mako, with 6AL-4V titanium channel handles, titanium zen pins, and precision bushings. Speed channels milled into the handles optimize balance, and it adds jimping for ladder tricks, tapered handles, and a chamfered spine. The trainer keeps the Mako's functional bottle opener with a hardened 410 stainless blade; the live Tanto, released in 2026, uses CPM 154 stainless. Both are stonewashed, with anodized and DLC editions also offered.",
+        "overallLength": "9.875",
+        "weight": "4.56",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "6AL-4V Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer (Bottle Opener)", "msrp": "399.99", "bladeStyle": "Trainer" },
+          { "variantSlug": "tanto",   "type": "live",    "label": "Tanto",                   "msrp": "500",    "bladeStyle": "Tanto", "bladeMaterial": "CPM 154" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries",        "url": "https://www.squidindustries.co",   "type": "official",  "note": "Trainer version, including anodized and DLC editions." },
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Live-blade Tanto, including anodized and DLC editions." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-hydro",
+    "name": "Hydro",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Tanto",
+    "priceRange": "$385–$425",
+    "versions": [
+      {
+        "versionSlug": "first-production",
+        "version": "First Production",
+        "discontinued": false,
+        "releaseYear": 2024,
+        "description": "The Hydro is a titanium live blade that Squid Industries spent two years prototyping. It uses 6AL-4V titanium sandwich handles with hidden zen pins and a double-angle chamfer, translucent Ultem spacers with built-in jimping, and a precision-tuned bushing system. The tanto blade is 14C28N stainless, stonewashed, offered sharpened or unsharpened and with an optional DLC coating. It is light and nimble, suited to quick flippers, and can be upgraded with full-length spacers.",
+        "overallLength": "9.95",
+        "weight": "4.01",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Hidden Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "6AL-4V Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "tanto", "type": "live", "label": "Tanto", "msrp": "395", "bladeStyle": "Tanto", "bladeMaterial": "14C28N" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Sold through the maker's live-blade storefront, sharpened or unsharpened, with or without a DLC blade." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Production runs sell out — check BST communities, eBay, and Reddit r/balisong for used listings." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-mako-harpoon",
+    "name": "Mako Harpoon",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Harpoon",
+    "priceRange": "$175–$195",
+    "versions": [
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": true,
+        "releaseYear": 2025,
+        "description": "The Mako Harpoon was the live-blade counterpart to the Mako trainer, sharing its 6061 T6511 aluminum channel handles and zen pins but swapping the trainer's washers for precision-machined bushings. It carried a stonewashed AEB-L stainless harpoon-style blade. The Mako Harpoon has been discontinued by Squid Industries.",
+        "overallLength": "10",
+        "weight": "4.20",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "6061 Aluminum",
+        "handleFinish": "Bead Blasted",
+        "variants": [
+          { "variantSlug": "harpoon", "type": "live", "label": "Harpoon", "msrp": "175", "bladeStyle": "Other", "bladeMaterial": "AEB-L" }
+        ],
+        "whereToFind": [
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Discontinued — check BST communities, eBay, and Reddit r/balisong for used listings." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-mutalisk",
+    "name": "Mutalisk",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Recurve Bowie",
+    "priceRange": "$340–$380",
+    "versions": [
+      {
+        "versionSlug": "v1",
+        "version": "v1",
+        "discontinued": false,
+        "releaseYear": 2026,
+        "description": "The Mutalisk is a collaboration between Squid Industries and HOM Design, reimagining HOM Design's OG Basilisk, which changed the balisong world in 2007. It uses 7075 T6511 aluminum channel handles with a hard-anodized finish, tang pins, and a bushing pivot. The blade is a 154CM stainless recurve bowie with a hand-crowned spine and a two-tone (stonewash and satin) finish. It ships latchless, with an optional titanium latch sold separately for carry. Dual-tone and DLC editions are also offered.",
+        "overallLength": "10.21",
+        "weight": "3.6",
+        "pivotSystem": "Bushing",
+        "latchType": "Latchless",
+        "pinSystem": "Tang Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Anodized",
+        "variants": [
+          { "variantSlug": "recurve-bowie", "type": "live", "label": "Recurve Bowie", "msrp": "340", "bladeStyle": "Bowie", "bladeMaterial": "154CM" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries Knives", "url": "https://squidindustriesknives.co", "type": "official",  "note": "Sold through the maker's live-blade storefront, with dual-tone and DLC editions and an optional titanium latch." },
+          { "label": "Secondary Market / BST",  "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-b",
+    "name": "Squiddy-B",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$54.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2020,
+        "description": "The Squiddy-B is an acetal upgrade of the Squiddy trainer, with integral channel-constructed black acetal handles and blade for a strong, lightweight build. It uses phosphor bronze washers for smooth flipping, a weighted nose pin for added momentum, and two O-ring silencers for near-silent flipping. Like the Squiddy, it has no sharp edges and is TSA-compatible, and it ships with a bite handle indicator.",
+        "overallLength": "10",
+        "weight": "2.6",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "Acetal",
+        "handleFinish": "Satin",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "54.99", "bladeStyle": "Trainer", "bladeMaterial": "Acetal" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, with black or silver hardware, a titanium-hardware Mod edition, and a build-to-order option." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-u",
+    "name": "Squiddy-U",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$59.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2021,
+        "description": "The Squiddy-U shares the Squiddy-B's acetal construction, pairing blue acetal handles with a black acetal blade. It uses phosphor bronze washers, zen pins, and latchless channel handles, and like the rest of the Squiddy line it has no sharp edges and is TSA-compatible.",
+        "overallLength": "10",
+        "weight": "2.6",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "Acetal",
+        "handleFinish": "Satin",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "59.99", "bladeStyle": "Trainer", "bladeMaterial": "Acetal" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including a build-to-order option." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-wh",
+    "name": "Squiddy-WH",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$79.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2024,
+        "description": "The Squiddy-WH is a refined acetal Squiddy with orange acetal handles and a black acetal blade. Compared with the Squiddy-B it has improved handle rounding for comfort and control, deeper jimping for grip during ladders, a revised inner jimping pattern for better contact with the silencer O-ring, and bite handle indication grooves on the blade. It uses phosphor bronze washers and is TSA-compatible.",
+        "overallLength": "10",
+        "weight": "2.6",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "Acetal",
+        "handleFinish": "Satin",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "79.99", "bladeStyle": "Trainer", "bladeMaterial": "Acetal" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-al",
+    "name": "Squiddy-AL",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$89.99–$104.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2023,
+        "description": "The Squiddy-AL is the metal Squiddy, with channel handles and a trainer blade both machined from 6061 aluminum alloy and a natural machined texture on all sides for grip. It is pinless, uses hand-tuned small phosphor bronze washers, and has a modular balance system with installable eye weights, plus bite handle indication grooves. It remains TSA-compatible. Anodized editions are also offered.",
+        "overallLength": "10",
+        "weight": "3.8",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Pinless",
+        "hasModularBalance": true,
+        "balanceValue": "Installable eye weights",
+        "handleConstruction": "Channel",
+        "handleMaterial": "6061 Aluminum",
+        "handleFinish": "Plain",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "89.99", "bladeStyle": "Trainer", "bladeMaterial": "6061 Aluminum" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including anodized editions and a build-to-order option." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-alt",
+    "name": "Squiddy-ALT",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$89.99–$104.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2025,
+        "description": "The Squiddy-ALT is a variant of the Squiddy-AL aimed at blade enthusiasts, with its eye weights readjusted for better weight distribution while flipping. Like the AL, it uses 6061 aluminum channel handles and trainer blade with a machined finish, a pinless design, small phosphor bronze washers, and a modular eye-weight balance system. It is TSA-compatible.",
+        "overallLength": "10",
+        "weight": "3.8",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Pinless",
+        "hasModularBalance": true,
+        "balanceValue": "Installable eye weights",
+        "handleConstruction": "Channel",
+        "handleMaterial": "6061 Aluminum",
+        "handleFinish": "Plain",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "89.99", "bladeStyle": "Trainer", "bladeMaterial": "6061 Aluminum" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker, including anodized editions." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "squid-industries-squiddy-xl",
+    "name": "Squiddy-XL",
+    "maker": "Squid Industries",
+    "makerSlug": "squid-industries",
+    "bladeStyle": "Trainer",
+    "priceRange": "$179.99",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2024,
+        "description": "The Squiddy-XL is a 200%-scale Squiddy, fully CNC-machined from HDPE (high-density polyethylene) with a grippy stonewashed finish. At nearly 20 inches open and about 12 ounces, it is a novelty and display piece rather than an everyday trainer. It uses stainless steel washers and zen pins, and ships with a bite handle indicator, an informational card, and two T27 Torx keys. A matching display stand is sold separately.",
+        "overallLength": "19.75",
+        "weight": "11.9",
+        "pivotSystem": "Washer",
+        "latchType": "Latchless",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "HDPE",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "179.99", "bladeStyle": "Trainer", "bladeMaterial": "HDPE" }
+        ],
+        "whereToFind": [
+          { "label": "Squid Industries", "url": "https://www.squidindustries.co", "type": "official", "note": "Available directly from the maker." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
   }
 ]
