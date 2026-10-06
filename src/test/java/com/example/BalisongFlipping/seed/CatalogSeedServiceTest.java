@@ -6,7 +6,9 @@ import com.example.BalisongFlipping.dtos.catalogSeedDtos.MakerSeedDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.VariantSeedDto;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.VersionSeedDto;
 import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
+import com.example.BalisongFlipping.enums.knives.TrainerBlade;
 import com.example.BalisongFlipping.modals.knifeCatalog.Knife;
+import com.example.BalisongFlipping.modals.knifeCatalog.KnifeVariant;
 import com.example.BalisongFlipping.modals.knifeCatalog.Maker;
 import com.example.BalisongFlipping.repositories.KnifeRepository;
 import com.example.BalisongFlipping.repositories.MakerRepository;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,11 +56,15 @@ class CatalogSeedServiceTest {
     }
 
     private VariantSeedDto trainerVariant(String slug) {
-        return new VariantSeedDto(slug, "trainer", "Standard", "150", null, null, null);
+        return new VariantSeedDto(slug, "trainer", "Standard", "150", null, null, null, null);
+    }
+
+    private VariantSeedDto trainerVariant(String slug, String trainerBlade) {
+        return new VariantSeedDto(slug, "trainer", "Trainer", "150", null, null, null, trainerBlade);
     }
 
     private VariantSeedDto liveBladeVariant(String slug, String bladeStyle, String bladeMaterial) {
-        return new VariantSeedDto(slug, "live", "Live Blade", "200", bladeStyle, bladeMaterial, null);
+        return new VariantSeedDto(slug, "live", "Live Blade", "200", bladeStyle, bladeMaterial, null, null);
     }
 
     private VersionSeedDto validVersion(List<VariantSeedDto> variants) {
@@ -223,12 +230,65 @@ class CatalogSeedServiceTest {
         when(knifeRepository.findBySlug("mako")).thenReturn(Optional.empty());
         when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
 
-        VariantSeedDto incompleteLiveVariant = new VariantSeedDto("live", "live", "Live Blade", "200", null, null, null);
+        VariantSeedDto incompleteLiveVariant = new VariantSeedDto("live", "live", "Live Blade", "200", null, null, null, null);
 
         CatalogValidationException ex = assertThrows(CatalogValidationException.class, () -> catalogSeedService.createKnife(
                 knifeSeed("mako", "squid-industries", List.of(validVersion(List.of(incompleteLiveVariant))))));
         assertTrue(ex.getMessage().contains("bladeStyle"));
         assertTrue(ex.getMessage().contains("bladeMaterial"));
+    }
+
+    @Test
+    void createKnifeDefaultsTrainerBladeToStandardAndLeavesLiveBladesUnset() {
+        when(knifeRepository.findBySlug("mako")).thenReturn(Optional.empty());
+        when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
+        when(knifeRepository.saveAndFlush(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+        when(knifeRepository.save(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+
+        Knife knife = catalogSeedService.createKnife(knifeSeed("mako", "squid-industries",
+                List.of(validVersion(List.of(trainerVariant("standard"), liveBladeVariant("live", "tanto", "aeb-l"))))));
+
+        List<KnifeVariant> variants = knife.getVersions().get(0).getVariants();
+        assertEquals(TrainerBlade.STANDARD, variants.get(0).getTrainerBlade());
+        assertNull(variants.get(1).getTrainerBlade());
+    }
+
+    @Test
+    void createKnifeAcceptsFalseEdgeTrainerBladeInSeedAndEnumForms() {
+        when(knifeRepository.findBySlug("mako")).thenReturn(Optional.empty());
+        when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
+        when(knifeRepository.saveAndFlush(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+        when(knifeRepository.save(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+
+        Knife knife = catalogSeedService.createKnife(knifeSeed("mako", "squid-industries",
+                List.of(validVersion(List.of(trainerVariant("false-edge", "false_edge"), trainerVariant("fe-enum", "FALSE_EDGE"), trainerVariant("std", "standard"))))));
+
+        List<KnifeVariant> variants = knife.getVersions().get(0).getVariants();
+        assertEquals(TrainerBlade.FALSE_EDGE, variants.get(0).getTrainerBlade());
+        assertEquals(TrainerBlade.FALSE_EDGE, variants.get(1).getTrainerBlade());
+        assertEquals(TrainerBlade.STANDARD, variants.get(2).getTrainerBlade());
+    }
+
+    @Test
+    void createKnifeRejectsUnrecognizedTrainerBlade() {
+        when(knifeRepository.findBySlug("mako")).thenReturn(Optional.empty());
+        when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
+
+        CatalogValidationException ex = assertThrows(CatalogValidationException.class, () -> catalogSeedService.createKnife(
+                knifeSeed("mako", "squid-industries", List.of(validVersion(List.of(trainerVariant("t", "sharp-ish")))))));
+        assertTrue(ex.getMessage().contains("unrecognized trainerBlade 'sharp-ish'"));
+    }
+
+    @Test
+    void createKnifeRejectsTrainerBladeOnLiveBladeVariant() {
+        when(knifeRepository.findBySlug("mako")).thenReturn(Optional.empty());
+        when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
+
+        VariantSeedDto liveWithTrainerBlade = new VariantSeedDto("live", "live", "Live Blade", "200", "tanto", "aeb-l", null, "false_edge");
+
+        CatalogValidationException ex = assertThrows(CatalogValidationException.class, () -> catalogSeedService.createKnife(
+                knifeSeed("mako", "squid-industries", List.of(validVersion(List.of(liveWithTrainerBlade))))));
+        assertTrue(ex.getMessage().contains("trainerBlade only applies to trainer variants"));
     }
 
     @Test
