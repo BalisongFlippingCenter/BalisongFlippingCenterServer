@@ -7,5 +7,6 @@ public record VariantSeedDto(
         String msrp,
         String bladeStyle,
         String bladeMaterial,
-        String imageUrl
+        String imageUrl,
+        String trainerBlade
 ) {}

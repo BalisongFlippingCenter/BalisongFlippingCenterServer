@@ -9,6 +9,8 @@ import com.example.BalisongFlipping.enums.knives.BladeStyle;
 import com.example.BalisongFlipping.enums.knives.HandleMaterial;
 import com.example.BalisongFlipping.enums.knives.PivotSystem;
 import com.example.BalisongFlipping.modals.knifeCatalog.Knife;
+import com.example.BalisongFlipping.enums.knives.KnifeType;
+import com.example.BalisongFlipping.enums.knives.TrainerBlade;
 import com.example.BalisongFlipping.modals.knifeCatalog.KnifeVariant;
 import com.example.BalisongFlipping.modals.knifeCatalog.KnifeVersion;
 import com.example.BalisongFlipping.modals.knifeCatalog.Maker;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -184,6 +187,23 @@ class KnifeCatalogServiceTest {
         assertEquals(2022, detail.versions().get(0).releaseYear());
         assertEquals(2018, detail.versions().get(1).releaseYear());
         assertEquals(null, detail.versions().get(2).releaseYear());
+    }
+
+    @Test
+    void getKnifeBySlugExposesTrainerBladeOnVariants() {
+        KnifeVariant falseEdge = variant(null, null, 159.99);
+        falseEdge.setType(KnifeType.TRAINER);
+        falseEdge.setTrainerBlade(TrainerBlade.FALSE_EDGE);
+        KnifeVariant live = variant(BladeStyle.TANTO, BladeMaterial.AEB_L, 265.0);
+        live.setType(KnifeType.LIVE_BLADE);
+        Knife k = knife("vulp-pro", "Vulp Pro", maker("nabalis", "Nabalis"), List.of(
+                version(null, null, 2023, false, List.of(falseEdge, live))));
+        when(knifeRepository.findBySlug("vulp-pro")).thenReturn(Optional.of(k));
+
+        KnifeDetailDto detail = knifeCatalogService.getKnifeBySlug("vulp-pro");
+
+        assertEquals("FALSE_EDGE", detail.versions().get(0).variants().get(0).trainerBlade());
+        assertNull(detail.versions().get(0).variants().get(1).trainerBlade());
     }
 
     @Test
