@@ -9,6 +9,8 @@ import com.example.BalisongFlipping.enums.knives.BladeStyle;
 import com.example.BalisongFlipping.enums.knives.HandleMaterial;
 import com.example.BalisongFlipping.enums.knives.PivotSystem;
 import com.example.BalisongFlipping.modals.knifeCatalog.Knife;
+import com.example.BalisongFlipping.enums.knives.KnifeType;
+import com.example.BalisongFlipping.enums.knives.TrainerBlade;
 import com.example.BalisongFlipping.modals.knifeCatalog.KnifeVariant;
 import com.example.BalisongFlipping.modals.knifeCatalog.KnifeVersion;
 import com.example.BalisongFlipping.modals.knifeCatalog.Maker;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -187,6 +190,23 @@ class KnifeCatalogServiceTest {
     }
 
     @Test
+    void getKnifeBySlugExposesTrainerBladeOnVariants() {
+        KnifeVariant falseEdge = variant(null, null, 159.99);
+        falseEdge.setType(KnifeType.TRAINER);
+        falseEdge.setTrainerBlade(TrainerBlade.FALSE_EDGE);
+        KnifeVariant live = variant(BladeStyle.TANTO, BladeMaterial.AEB_L, 265.0);
+        live.setType(KnifeType.LIVE_BLADE);
+        Knife k = knife("vulp-pro", "Vulp Pro", maker("nabalis", "Nabalis"), List.of(
+                version(null, null, 2023, false, List.of(falseEdge, live))));
+        when(knifeRepository.findBySlug("vulp-pro")).thenReturn(Optional.of(k));
+
+        KnifeDetailDto detail = knifeCatalogService.getKnifeBySlug("vulp-pro");
+
+        assertEquals("FALSE_EDGE", detail.versions().get(0).variants().get(0).trainerBlade());
+        assertNull(detail.versions().get(0).variants().get(1).trainerBlade());
+    }
+
+    @Test
     void getKnifeBySlugThrowsForUnknownSlug() {
         when(knifeRepository.findBySlug("bogus")).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class, () -> knifeCatalogService.getKnifeBySlug("bogus"));
@@ -249,6 +269,21 @@ class KnifeCatalogServiceTest {
         when(knifeRepository.findBySlug("mako")).thenReturn(Optional.of(k));
 
         assertEquals("$150–$200", knifeCatalogService.getKnifeBySlug("mako").priceRangeSummary());
+    }
+
+    @Test
+    void toSummaryFormatsPriceRangeInUsFormatRegardlessOfServerLocale() {
+        Knife k = knife("tsunami", "Tsunami", maker("squid", "Squid"), List.of(
+                version(null, null, 2020, false, List.of(variant(null, null, 474.99), variant(null, null, 1800.0)))));
+        when(knifeRepository.findBySlug("tsunami")).thenReturn(Optional.of(k));
+
+        java.util.Locale original = java.util.Locale.getDefault();
+        java.util.Locale.setDefault(java.util.Locale.GERMANY);
+        try {
+            assertEquals("$475–$1,800", knifeCatalogService.getKnifeBySlug("tsunami").priceRangeSummary());
+        } finally {
+            java.util.Locale.setDefault(original);
+        }
     }
 
     @Test

@@ -184,6 +184,17 @@ public class KnifeSpecNormalizer {
         throw new IllegalStateException("Unrecognized variant type '" + raw + "' — expected 'trainer' or 'live'");
     }
 
+    // Accepts the seed-authoring forms ("standard", "false_edge", "false edge") and
+    // TrainerBlade's own enum names, so a variant read back via the API round-trips.
+    // Returns null for anything unrecognized -- CatalogSeedService rejects that.
+    public static TrainerBlade trainerBlade(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String v = raw.toLowerCase().trim().replace('_', ' ').replace('-', ' ');
+        if (v.equals("standard")) return TrainerBlade.STANDARD;
+        if (v.equals("false edge")) return TrainerBlade.FALSE_EDGE;
+        return null;
+    }
+
     public static SourceType sourceType(String raw) {
         if (raw == null || raw.isBlank()) return SourceType.SECONDARY;
         try {

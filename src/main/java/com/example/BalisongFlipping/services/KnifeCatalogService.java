@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -151,7 +152,8 @@ public class KnifeCatalogService {
                         variant.getMsrp(),
                         enumName(variant.getBladeStyle()),
                         enumName(variant.getBladeMaterial()),
-                        variant.getImageUrl()
+                        variant.getImageUrl(),
+                        enumName(variant.getTrainerBlade())
                 ))
                 .collect(Collectors.toList());
 
@@ -215,8 +217,8 @@ public class KnifeCatalogService {
         if (prices.isEmpty()) return null;
         double min = Collections.min(prices);
         double max = Collections.max(prices);
-        if (min == max) return String.format("$%.0f", min);
-        return String.format("$%.0f–$%.0f", min, max);
+        if (min == max) return String.format(Locale.US, "$%,.0f", min);
+        return String.format(Locale.US, "$%,.0f–$%,.0f", min, max);
     }
 
     private String enumName(Enum<?> value) {
