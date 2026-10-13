@@ -3,6 +3,7 @@ package com.example.BalisongFlipping.seed;
 import com.example.BalisongFlipping.dtos.catalogSeedDtos.*;
 import com.example.BalisongFlipping.dtos.uploadsDtos.PresignedUploadTargetDto;
 import com.example.BalisongFlipping.enums.knives.KnifeType;
+import com.example.BalisongFlipping.enums.knives.TrainerBlade;
 import com.example.BalisongFlipping.modals.knifeCatalog.*;
 import com.example.BalisongFlipping.repositories.KnifeRepository;
 import com.example.BalisongFlipping.repositories.MakerRepository;
@@ -232,6 +233,15 @@ public class CatalogSeedService {
                 if (KnifeSpecNormalizer.variantType(variant.type()) == KnifeType.LIVE_BLADE) {
                     if (isBlank(variant.bladeStyle()))    variantMissing.add("bladeStyle");
                     if (isBlank(variant.bladeMaterial())) variantMissing.add("bladeMaterial");
+                    if (!isBlank(variant.trainerBlade())) {
+                        throw new CatalogValidationException(
+                                "Variant '" + variant.variantSlug() + "' in version '" + v.versionSlug()
+                                        + "' is a live blade -- trainerBlade only applies to trainer variants");
+                    }
+                } else if (!isBlank(variant.trainerBlade()) && KnifeSpecNormalizer.trainerBlade(variant.trainerBlade()) == null) {
+                    throw new CatalogValidationException(
+                            "Variant '" + variant.variantSlug() + "' in version '" + v.versionSlug()
+                                    + "' has unrecognized trainerBlade '" + variant.trainerBlade() + "' -- expected 'standard' or 'false_edge'");
                 }
 
                 if (!variantMissing.isEmpty()) {
@@ -289,6 +299,10 @@ public class CatalogSeedService {
         variant.setBladeStyle(KnifeSpecNormalizer.bladeStyle(dto.bladeStyle()));
         variant.setBladeMaterial(KnifeSpecNormalizer.bladeMaterial(dto.bladeMaterial()));
         variant.setImageUrl(dto.imageUrl());
+        if (type == KnifeType.TRAINER) {
+            TrainerBlade trainerBlade = KnifeSpecNormalizer.trainerBlade(dto.trainerBlade());
+            variant.setTrainerBlade(trainerBlade != null ? trainerBlade : TrainerBlade.STANDARD);
+        }
         return variant;
     }
 
