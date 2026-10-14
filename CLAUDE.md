@@ -186,7 +186,7 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 |---|---|---|---|
 | POST | `/ai/chat` | `X-Client-Id`/`X-Client-Key` (client credential, not JWT) + optional `Authorization` | Relays to the separate `BalisongFlippingCenterAIPython` service and streams back a `text/plain` reply |
 
-`AiChatController`/`AiChatService` validate the caller's client credentials (`ai.clients.website.key` / `ai.clients.discord.key`, one per known frontend/bot client), rate-limit by `sessionId` (`ai.rate-limit.max-requests-per-minute`, default 10/min), and forward the caller's JWT plus the frontend's `currentPath` to the AI service at `ai.service.base-url` (`AI_SERVICE_BASE_URL`, default `http://localhost:8001`) — never trusting the client-supplied JWT without it also passing normal auth internally. The call to the AI service itself carries an `X-Internal-Secret` header (`ai.service.shared-secret` / `AI_SERVICE_SHARED_SECRET`) that the AI service verifies, so it only accepts traffic relayed through this backend, not direct hits; the check is skipped when the secret is unset, which is only true in local dev.
+`AiChatController`/`AiChatService` validate the caller's client credentials (`ai.clients.website.key` / `ai.clients.discord.key`, one per known frontend/bot client), rate-limit by `sessionId` (`ai.rate-limit.max-requests-per-minute`, default 10/min), and forward the caller's JWT, the frontend's `currentPath`, and the validated `X-Client-Id` (as `client`) to the AI service at `ai.service.base-url` (`AI_SERVICE_BASE_URL`, default `http://localhost:8001`) — never trusting the client-supplied JWT without it also passing normal auth internally. The call to the AI service itself carries an `X-Internal-Secret` header (`ai.service.shared-secret` / `AI_SERVICE_SHARED_SECRET`) that the AI service verifies, so it only accepts traffic relayed through this backend, not direct hits; the check is skipped when the secret is unset, which is only true in local dev.
 
 The AI service ("Latch") is a FastAPI microservice (separate repo, separate EC2 instance, own Terraform state) that calls Claude via AWS Bedrock and does real tool-calling back against this backend's own public API (`/posts/any`, `/accounts/any/**`, `/catalog/any/**`, `/reports`) to answer questions — it never answers from model memory about site-specific data. See that repo's README for its own architecture; there's nothing else to run or configure on this side beyond the `ai.*`/`AI_*` properties above.
 
@@ -265,7 +265,7 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 ---
 
 ## Known Gaps / To Do
-- **Discord bot**: planned — dedicated endpoints for bug reports and flagged posts with bot auth (API key, not JWT)
+- **Discord bot**: now a general balisong bot for any server (Latch + catalog lookups only, separate repo); the earlier plan for bot bug-report/flag endpoints is dropped
 - **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
 
 ---

@@ -27,12 +27,12 @@ public class AiChatService {
     @Value("${ai.service.shared-secret}")
     private String aiServiceSharedSecret;
 
-    private record PythonChatRequest(String session_id, String message, String access_token, String current_path) {}
+    private record PythonChatRequest(String session_id, String message, String access_token, String current_path, String client) {}
 
-    public StreamingResponseBody streamChat(String sessionId, String message, String accessToken, String currentPath) {
+    public StreamingResponseBody streamChat(String sessionId, String message, String accessToken, String currentPath, String clientId) {
         return outputStream -> {
             String body = objectMapper.writeValueAsString(
-                    new PythonChatRequest(sessionId, message, accessToken, currentPath)
+                    new PythonChatRequest(sessionId, message, accessToken, currentPath, clientId)
             );
 
             HttpRequest request = HttpRequest.newBuilder()
