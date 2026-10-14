@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Flow;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,7 +46,7 @@ class AiChatServiceTest {
         when(httpResponse.body()).thenReturn(new ByteArrayInputStream("hello".getBytes()));
         org.mockito.Mockito.doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
 
-        StreamingResponseBody body = aiChatService.streamChat("session-1", "Hi", "access-token", "/chat");
+        StreamingResponseBody body = aiChatService.streamChat("session-1", "Hi", "access-token", "/chat", "website");
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         body.writeTo(out);
@@ -62,7 +65,7 @@ class AiChatServiceTest {
     void streamChatWrapsInterruptedExceptionAsIOException() throws Exception {
         when(httpClient.send(any(HttpRequest.class), any())).thenThrow(new InterruptedException());
 
-        StreamingResponseBody body = aiChatService.streamChat("session-1", "Hi", "access-token", "/chat");
+        StreamingResponseBody body = aiChatService.streamChat("session-1", "Hi", "access-token", "/chat", "website");
 
         assertThrows(IOException.class, () -> body.writeTo(new ByteArrayOutputStream()));
         assertTrue(Thread.interrupted());
@@ -82,9 +85,32 @@ class AiChatServiceTest {
             }
         };
 
-        aiChatService.streamChat("session-1", "Hi", "access-token", "/chat").writeTo(out);
+        aiChatService.streamChat("session-1", "Hi", "access-token", "/chat", "website").writeTo(out);
 
         assertEquals(2500, out.size());
         assertEquals(3, flushCount[0]);
+    }
+
+    @Test
+    void streamChatForwardsTheCallingClientToTheAiService() throws Exception {
+        when(httpResponse.body()).thenReturn(new ByteArrayInputStream(new byte[0]));
+        org.mockito.Mockito.doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        aiChatService.streamChat("session-1", "Hi", null, null, "discord").writeTo(new ByteArrayOutputStream());
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        org.mockito.Mockito.verify(httpClient).send(requestCaptor.capture(), any());
+        assertTrue(bodyOf(requestCaptor.getValue()).contains("\"client\":\"discord\""));
+    }
+
+    private static String bodyOf(HttpRequest request) {
+        StringBuilder body = new StringBuilder();
+        request.bodyPublisher().orElseThrow().subscribe(new Flow.Subscriber<ByteBuffer>() {
+            public void onSubscribe(Flow.Subscription subscription) { subscription.request(Long.MAX_VALUE); }
+            public void onNext(ByteBuffer item) { body.append(StandardCharsets.UTF_8.decode(item)); }
+            public void onError(Throwable throwable) {}
+            public void onComplete() {}
+        });
+        return body.toString();
     }
 }
