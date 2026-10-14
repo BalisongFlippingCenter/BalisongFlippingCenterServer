@@ -56,7 +56,7 @@ public class AiChatController {
         } catch (Exception ignored) {
         }
 
-        StreamingResponseBody body = aiChatService.streamChat(request.sessionId(), request.message(), accessToken, request.currentPath());
+        StreamingResponseBody body = aiChatService.streamChat(request.sessionId(), request.message(), accessToken, request.currentPath(), clientId);
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(body);
     }
 
