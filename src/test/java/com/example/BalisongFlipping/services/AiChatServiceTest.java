@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Flow;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -101,6 +102,37 @@ class AiChatServiceTest {
         ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         org.mockito.Mockito.verify(httpClient).send(requestCaptor.capture(), any());
         assertTrue(bodyOf(requestCaptor.getValue()).contains("\"client\":\"discord\""));
+    }
+
+    @Test
+    void clearSessionSendsDeleteForTheSessionToTheAiService() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(204);
+        org.mockito.Mockito.doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        assertTrue(aiChatService.clearSession("discord-1-2"));
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        org.mockito.Mockito.verify(httpClient).send(requestCaptor.capture(), any());
+        HttpRequest sentRequest = requestCaptor.getValue();
+        assertEquals("DELETE", sentRequest.method());
+        assertEquals("http://ai-service:9000/chat/session/discord-1-2", sentRequest.uri().toString());
+        assertEquals("shared-secret", sentRequest.headers().firstValue("X-Internal-Secret").orElse(null));
+    }
+
+    @Test
+    void clearSessionReturnsFalseWhenTheAiServiceFails() throws Exception {
+        when(httpResponse.statusCode()).thenReturn(500);
+        org.mockito.Mockito.doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        assertFalse(aiChatService.clearSession("discord-1-2"));
+    }
+
+    @Test
+    void clearSessionWrapsInterruptedExceptionAsIOException() throws Exception {
+        when(httpClient.send(any(HttpRequest.class), any())).thenThrow(new InterruptedException());
+
+        assertThrows(IOException.class, () -> aiChatService.clearSession("discord-1-2"));
+        assertTrue(Thread.interrupted());
     }
 
     private static String bodyOf(HttpRequest request) {
