@@ -8,9 +8,11 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Service
@@ -28,6 +30,22 @@ public class AiChatService {
     private String aiServiceSharedSecret;
 
     private record PythonChatRequest(String session_id, String message, String access_token, String current_path, String client) {}
+
+    public boolean clearSession(String sessionId) throws IOException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(aiServiceBaseUrl + "/chat/session/" + URLEncoder.encode(sessionId, StandardCharsets.UTF_8)))
+                .header("X-Internal-Secret", aiServiceSharedSecret)
+                .timeout(Duration.ofSeconds(10))
+                .DELETE()
+                .build();
+
+        try {
+            return httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while calling AI service", e);
+        }
+    }
 
     public StreamingResponseBody streamChat(String sessionId, String message, String accessToken, String currentPath, String clientId) {
         return outputStream -> {
