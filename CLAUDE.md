@@ -267,7 +267,7 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 
 ## Known Gaps / To Do
 - **Discord bot**: now a general balisong bot for any server (Latch + catalog lookups only, separate repo); the earlier plan for bot bug-report/flag endpoints is dropped
-- **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
+- **Legal**: Privacy Policy and ToS pages are live on the frontend (`/privacy`, `/terms`); still open are the per-post buy/sell + tutorial disclaimers and an attorney review
 
 ---
 
