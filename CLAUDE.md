@@ -18,17 +18,17 @@ Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack co
 | Framework | Spring Boot 3.2.5 |
 | ORM | Spring Data JPA + Hibernate 6 |
 | Database | PostgreSQL 16 (containerized via Docker) |
-| Schema migrations | Flyway (V1–V17) |
+| Schema migrations | Flyway (V1–V27) |
 | Auth | JWT (`jjwt` 0.11.5) + refresh tokens (7-day expiry) |
 | File storage | AWS S3 (SDK v2 — `S3Client` + `S3Presigner`, fully wired) |
-| Email | Spring Mail (JavaMailSender, fully wired) |
+| Email | Spring Mail (JavaMailSender over Gmail SMTP; the instance role also allows SES, which is unused) |
 | WebSocket | Spring WebSocket + STOMP (fully wired) |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Observability | Spring Actuator (`/actuator/health`) |
 | Build | Maven (mvnw wrapper) |
 | Container | Docker + Docker Compose |
 | CI/CD | GitHub Actions → AWS ECR |
-| Hosting | AWS EC2 (manual pull + compose up) |
+| Hosting | AWS EC2 (Terraform-managed; deploys via SSM `docker-compose pull` + `up`) |
 
 ---
 
@@ -247,13 +247,13 @@ S3 bucket CORS (`PUT` from the frontend origins) is required for step 2 and live
 `localhost:5432`, db=`balisong_db`, user=`balisong_user`, pass=`balisong_pass`
 
 ### Production infrastructure (Terraform-managed, since 2026-08-24)
-IaC lives in a separate repo, `BalisongFlippingCenterTerraformProd` (not cloned locally by default — `gh repo clone BalisongFlippingCenter/BalisongFlippingCenterTerraformProd`). S3 backend for state: `balisong-flipping-center-terraform-state-prod`.
+IaC lives in a separate repo, `BalisongFlippingCenterTerraformProd` (private; cloned locally at `C:\Users\spiri\IdeaProjects\BalisongFlippingCenterTerraformProd`). S3 backend for state: `balisong-flipping-center-terraform-state-prod`.
 
 - **Production frontend**: CloudFront (`d2zzr8bab26vq8.cloudfront.net`, aliases `balisongflippingcenter.com` / `www.balisongflippingcenter.com`) serving an S3 bucket (`balisong-flipping-center-frontend-prod`) via OAC. `/api/*` is routed by an `ordered_cache_behavior` to the backend EC2 origin (caching disabled); everything else hits the S3 origin with a CloudFront Function rewriting SPA routes to `index.html`.
 - **Production backend**: EC2 instance `i-0fd15131d9c0681e8` (`100.61.159.104`), created by Terraform's `aws_instance.server` + `aws_eip.server`. Security group restricts port 8080 to CloudFront's managed prefix list only, SSH to a single admin CIDR (`var.ssh_allowed_cidr`).
   - `user_data` (see `templates/user_data.sh.tpl`) installs Docker/Compose/AWS CLI/SSM agent, pulls all app secrets from SSM Parameter Store (`/balisong/prod/*`) into `.env`, writes `docker-compose.yaml` from a template baked into `user_data`, logs into ECR, and starts the stack — so the instance is fully reproducible from a `terraform apply`, with no hand-maintained config on the box.
   - Secrets (`DB_PASSWORD`, `JWT_SECRET_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`) are Terraform variables supplied via `TF_VAR_*` env vars at apply time (never written to `terraform.tfvars`), stored as SSM `SecureString`/`String` parameters, and read by the instance role at boot — the app never gets long-lived AWS access keys (S3 access is via the instance's IAM role).
-  - `ADMIN_BOOTSTRAP_EMAIL` (see Reports & Moderation above) needs to be added to this same SSM/`user_data` pipeline in `BalisongFlippingCenterTerraformProd` before it'll take effect in prod — not yet done as of this writing.
+  - `ADMIN_BOOTSTRAP_EMAIL` (see Reports & Moderation above) is wired through this same SSM/`user_data` pipeline (`aws_ssm_parameter.admin_bootstrap_email` in `infra/ssm_parameters.tf`, set via `TF_VAR_admin_bootstrap_email`).
 - **Testing environment**: torn down 2026-10-05 to cut AWS costs (~$105/mo → ~$40/mo). Destroyed: the Terraform `testing/infra` and `testing/secrets` stacks (testing backend + AI instances, `test.balisongflippingcenter.com` CloudFront/ACM, testing VPC/IAM/SSM/S3/ECR), plus the manually-created `balisong-testing-server` (`i-0638063ca847f2274`) and staging-frontend (`i-09053fa6c166433ae`) boxes. The Terraform code and the `deploy-server-to-test.yml` workflow are kept for reuse — the workflow is disabled on GitHub (`gh workflow enable deploy-server-to-test.yml` to restore). To rebuild: `terraform apply` in `testing/secrets` (secrets via `TF_VAR_*`) then `testing/infra` in `BalisongFlippingCenterTerraformProd`, update the `AWS_TESTING_*` GitHub repo variables from `terraform output`, re-enable the workflow, and push to `test`.
 - **CI/CD (GitHub Actions, `.github/workflows/deploy-server-to-prod.yml`)**: on push to `master` — build/push image to ECR (`AWS_ECR_REPOSITORY_URL` repo var, tagged with the commit SHA and `latest`) via OIDC (`AWS_BACKEND_DEPLOY_ROLE_ARN`), deploy via `aws ssm send-command` (`docker-compose pull server && up -d --force-recreate server`) against `AWS_EC2_INSTANCE_ID`, then poll `https://balisongflippingcenter.com/api/actuator/health` for up to 5 minutes to verify.
   - `AWS_EC2_INSTANCE_ID` must always match whichever instance ID Terraform currently outputs for `aws_instance.server` (`terraform output ec2_instance_id`) — it does **not** update itself. A 2026-08-24 incident traced back to this variable silently pointing at a Terraform instance that had been replaced (likely by the AMI-forced-replacement scenario noted in `ec2.tf`) and never updated, so deploys had been SSM-targeting a nonexistent instance while a manually-created replacement (now `balisong-testing-server`) served real production traffic with hand-edited, buggy config. Always cross-check this variable against `terraform output` after any `apply` that touches `aws_instance.server`.
@@ -267,7 +267,7 @@ Lombok annotation processing does not work with Java 24 via Maven CLI. All JPA e
 
 ## Known Gaps / To Do
 - **Discord bot**: now a general balisong bot for any server (Latch + catalog lookups only, separate repo); the earlier plan for bot bug-report/flag endpoints is dropped
-- **Legal**: Privacy Policy, ToS, buy/sell + tutorial disclaimers — planned, not implemented
+- **Legal**: Privacy Policy and ToS pages are live on the frontend (`/privacy`, `/terms`); still open are the per-post buy/sell + tutorial disclaimers and an attorney review
 
 ---
 
