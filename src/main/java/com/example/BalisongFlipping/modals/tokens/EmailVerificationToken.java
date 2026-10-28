@@ -4,7 +4,7 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Entity
 @Table(name = "email_verification_tokens")
@@ -33,9 +33,9 @@ public class EmailVerificationToken {
 
     public String generateToken() {
         StringBuilder t = new StringBuilder();
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         for (int i = 0; i < 6; i++) {
-            t.append(random.nextInt(9) + 1);
+            t.append(random.nextInt(10));
         }
         return t.toString();
     }

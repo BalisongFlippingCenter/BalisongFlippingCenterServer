@@ -28,7 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -101,7 +101,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
         do {
             if (!identifier.isEmpty()) identifier.delete(0, identifier.length());
-            Random rand = new Random();
+            SecureRandom rand = new SecureRandom();
             for (int i = 0; i < 4; i++) identifier.append(rand.nextInt(10));
         } while (!validateGeneratedIdentifierCode(identifier.toString(), displayName));
 

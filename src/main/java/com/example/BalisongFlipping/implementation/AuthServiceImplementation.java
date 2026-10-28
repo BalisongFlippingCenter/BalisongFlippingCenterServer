@@ -2,7 +2,7 @@ package com.example.BalisongFlipping.implementation;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -381,6 +381,6 @@ public class AuthServiceImplementation implements AuthService {
                 return sanitized.length() > 20 ? sanitized.substring(0, 20) : sanitized;
             }
         }
-        return "user" + (100000 + new Random().nextInt(900000));
+        return "user" + (100000 + new SecureRandom().nextInt(900000));
     }
 }
