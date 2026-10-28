@@ -128,9 +128,6 @@ public class AuthServiceImplementation implements AuthService {
 
     @Override
     public Boolean validateEmailVerification(String email, String code) throws Exception {
-        // legacy clients send only the code; drop this branch once the frontend always sends the email
-        if (email == null) return emailService.validateEmailTokenVerification(code);
-
         Optional<Account> account = accountRepository.findAccountByEmail(email);
         if (account.isEmpty()) return false;
 

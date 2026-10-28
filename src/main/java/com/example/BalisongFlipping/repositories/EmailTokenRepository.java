@@ -9,7 +9,5 @@ public interface EmailTokenRepository extends JpaRepository<EmailVerificationTok
 
     void deleteByOwner_Id(Long id);
 
-    Optional<EmailVerificationToken> findByToken(String token);
-
     Optional<EmailVerificationToken> findFirstByOwner_IdOrderByIdDesc(Long ownerId);
 }
