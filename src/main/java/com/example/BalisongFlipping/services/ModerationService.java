@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Service
 public class ModerationService {
@@ -42,7 +42,7 @@ public class ModerationService {
         if (user == null) return;
 
         if (ProfanityFilter.containsProfanity(user.getDisplayName())) {
-            String newName = "user" + (100000 + new Random().nextInt(900000));
+            String newName = "user" + (100000 + new SecureRandom().nextInt(900000));
             user.setDisplayName(newName);
             user.setIdentifierCode(accountService.generateIdentifierCode(newName));
             accountRepository.save(user);
