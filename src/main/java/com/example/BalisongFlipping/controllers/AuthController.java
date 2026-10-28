@@ -50,6 +50,16 @@ public class AuthController {
         this.authenticationService = authenticationService;
     }
 
+    private static ResponseCookie refreshTokenCookie(String value, Duration maxAge) {
+        return ResponseCookie.from("Refresh-Token-Cookie", value)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(maxAge)
+                .sameSite("Strict")
+                .build();
+    }
+
     @GetMapping("/check-token")
     public ResponseEntity<?> checkToken(@RequestParam String token) {
 
@@ -173,13 +183,7 @@ public class AuthController {
             }
 
             // always expire the cookie regardless of whether a token was found
-            ResponseCookie expiredCookie = ResponseCookie.from("Refresh-Token-Cookie", "")
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ZERO)
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, expiredCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie("", Duration.ZERO).toString());
 
             return new ResponseEntity<>("Successfully logged out user.", HttpStatus.OK);
         }
@@ -258,18 +262,12 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(authenticatedUser.getEmail());
 
         // set refresh token in cookie
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
-                .httpOnly(true)
-                .path("/")
-                .maxAge(Duration.ofDays(7))
-                .sameSite("Lax")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(refreshToken.getToken(), Duration.ofDays(7)).toString());
 
         // get collection data
         CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
 
-        return new LoginResponseDto(accessToken, refreshToken.getToken(), accountService.toUserDto(authenticatedUser), collectionData);
+        return new LoginResponseDto(accessToken, accountService.toUserDto(authenticatedUser), collectionData);
     }
 
     @PostMapping("/google")
@@ -282,20 +280,13 @@ public class AuthController {
             String accessToken = jwtService.generateAccessToken(account);
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(account.getEmail());
 
-            ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ofDays(7))
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(refreshToken.getToken(), Duration.ofDays(7)).toString());
 
             CollectionDataDto collectionData = collectionService.getCollection(
                     user.getCollectionId() != null ? user.getCollectionId().toString() : null);
 
             return new ResponseEntity<>(new GoogleLoginResponseDto(
                     accessToken,
-                    refreshToken.getToken(),
                     accountService.toUserDto(account),
                     collectionData,
                     result.isNewUser()
@@ -344,11 +335,10 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token-login")
-    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request, @RequestBody(required = false) String tokenFromBody) throws Exception {
+    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request) throws Exception {
         try {
             String refreshTokenValue = null;
 
-            // try cookie first
             Cookie[] cookies = request.getCookies();
             if (cookies != null) {
                 for (Cookie cookie : cookies) {
@@ -359,11 +349,6 @@ public class AuthController {
                 }
             }
 
-            // fall back to body (used when cross-origin cookie can't be sent)
-            if (refreshTokenValue == null && tokenFromBody != null && !tokenFromBody.isBlank()) {
-                refreshTokenValue = tokenFromBody.trim();
-            }
-
             if (refreshTokenValue == null) {
                 throw new Exception("No Refresh Token");
             }
@@ -372,7 +357,6 @@ public class AuthController {
 
             LoginResponseDto loginResponse = new LoginResponseDto(
                     jwtService.generateAccessToken(verifiedToken.getOwner()),
-                    verifiedToken.getToken(),
                     accountService.toUserDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
                     collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
             );

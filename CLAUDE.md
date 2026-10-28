@@ -56,12 +56,14 @@ utils/            ProfanityFilter
 | POST | `/auth/register` | Register — `{ email, displayName, password }` |
 | POST | `/auth/login` | Login — returns `LoginResponseDto` with `UserDto` + collection |
 | POST | `/auth/logout` | Invalidate refresh token |
-| POST | `/auth/refresh-token-login` | Re-auth using cookie or body token |
+| POST | `/auth/refresh-token-login` | Re-auth from the refresh-token cookie (body is ignored) |
 | GET | `/auth/refresh-access-token` | New access token from cookie |
 | PATCH | `/auth/display-name` | Set initial display name (auth required) |
 | POST | `/auth/verify-admin-login` | `{ email, code }` — completes login for `ADMIN` accounts (see below) |
 | GET | `/auth/verify-email-token/{token}?email=` | Completes email verification for a new password-based account. `email` is required (`400` without it) so the code is checked against that account only |
 | POST | `/auth/resend-email-token/{email}` | Re-sends (replaces) the 6-digit verification code |
+
+**Refresh token**: lives only in the `Refresh-Token-Cookie` (`HttpOnly`, `Secure`, `SameSite=Strict`, 7 days, set by `AuthController.refreshTokenCookie`) and is never returned in a response body — login, admin verification, Google sign-in and `refresh-token-login` responses carry only the access token. One refresh token per account (`RefreshTokenService.createRefreshToken` deletes the previous one), so logging in elsewhere ends the other session. Not rotated on use.
 
 **Admin login step-up**: when `POST /auth/login` succeeds for an account with `role=ADMIN`, no tokens are issued yet — a 6-digit code (reusing the `EmailVerificationToken`/`email_verification_tokens` mechanism, 10-min expiry, same table password-reset uses) is emailed to the account and the response is `202` with `AdminLoginChallengeDto{requiresAdminVerification:true, email}` instead of `LoginResponseDto`. The client then calls `POST /auth/verify-admin-login` with the code to receive the normal `LoginResponseDto` (access token, refresh-token cookie, etc.) exactly as a non-admin login would. A second "login successful" email fires once verification succeeds, as a canary. Google sign-in (`/auth/google`) is blocked entirely for `ADMIN_BOOTSTRAP_EMAIL` (both logging into an existing account and creating a new one with that address) — password is the only login path for that account, so there's one auth path to secure rather than two, and no way for someone else to claim that email via Google before the real admin registers it. Non-admin logins are unaffected.
 
