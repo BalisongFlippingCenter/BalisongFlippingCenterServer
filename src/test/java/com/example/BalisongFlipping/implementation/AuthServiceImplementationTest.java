@@ -371,14 +371,6 @@ class AuthServiceImplementationTest {
         verify(verificationCodeService, never()).verify(any(), anyString());
     }
 
-    @Test
-    void validateEmailVerificationWithoutEmailFallsBackToLegacyLookup() throws Exception {
-        when(emailService.validateEmailTokenVerification("123456")).thenReturn(true);
-
-        assertTrue(authService.validateEmailVerification(null, "123456"));
-        verify(verificationCodeService, never()).verify(any(), anyString());
-    }
-
     // -------------------------------------------------------------------------
     // forgotPassword / confirmForgotPassword
     // -------------------------------------------------------------------------

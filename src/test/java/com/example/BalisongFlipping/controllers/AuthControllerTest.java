@@ -428,11 +428,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void verifyEmailTokenWithoutEmailPassesNull() throws Exception {
-        when(authenticationService.validateEmailVerification(null, "123456")).thenReturn(true);
-
+    void verifyEmailTokenRequiresEmail() throws Exception {
         mockMvc.perform(get("/auth/verify-email-token/{token}", "123456"))
-                .andExpect(status().isAccepted());
+                .andExpect(status().isBadRequest());
+
+        verify(authenticationService, never()).validateEmailVerification(any(), any());
     }
 
     @Test

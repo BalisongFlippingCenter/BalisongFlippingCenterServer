@@ -68,7 +68,7 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email-token/{token}")
-    public ResponseEntity<?> verifyEmailToken(@PathVariable String token, @RequestParam(required = false) String email) {
+    public ResponseEntity<?> verifyEmailToken(@PathVariable String token, @RequestParam String email) {
         try {
             if (authenticationService.validateEmailVerification(email, token)) {
                 return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
