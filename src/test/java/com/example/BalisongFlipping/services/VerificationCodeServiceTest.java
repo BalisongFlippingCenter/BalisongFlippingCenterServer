@@ -71,15 +71,6 @@ class VerificationCodeServiceTest {
     }
 
     @Test
-    void verifyLooksUpOnlyTheAccountsOwnCode() throws Exception {
-        tokenWithCode("123456");
-
-        verificationCodeService.verify(user, "123456");
-
-        verify(emailTokenRepository, never()).findByToken(any());
-    }
-
-    @Test
     void verifyCountsAWrongCode() {
         EmailVerificationToken token = tokenWithCode("123456");
 

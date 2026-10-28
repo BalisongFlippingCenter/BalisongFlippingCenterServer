@@ -1,15 +1,8 @@
 package com.example.BalisongFlipping.implementation;
 
-import java.time.Instant;
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.BalisongFlipping.modals.accounts.Account;
-import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
-import com.example.BalisongFlipping.repositories.AccountRepository;
-import com.example.BalisongFlipping.repositories.EmailTokenRepository;
 import com.example.BalisongFlipping.services.EmailService;
 
 import org.springframework.mail.SimpleMailMessage;
@@ -21,12 +14,6 @@ public class EmailServiceImplementation implements EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Autowired
-    private EmailTokenRepository emailTokenRepository;
-
-    @Autowired
-    private AccountRepository accountRepository;
-
     @Override
     public void sendEmail(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
@@ -34,27 +21,5 @@ public class EmailServiceImplementation implements EmailService {
         message.setSubject(subject);
         message.setText(text);
         mailSender.send(message);
-    }
-
-    @Override
-    public Boolean validateEmailTokenVerification(String emailToken) throws Exception {
-        Optional<EmailVerificationToken> foundToken = emailTokenRepository.findByToken(emailToken);
-
-        if (foundToken.isPresent()) {
-            if (foundToken.get().getToken().equals(emailToken) &&
-                    validatedEmailTokenExpiration(foundToken.get().getExpiration())) {
-                Account owner = foundToken.get().getOwner();
-                owner.setEmailVerified(true);
-                accountRepository.save(owner);
-                return true;
-            }
-            return false;
-        }
-
-        throw new Exception("Token Not Found");
-    }
-
-    private Boolean validatedEmailTokenExpiration(Instant tokenExpiration) {
-        return tokenExpiration.compareTo(Instant.now()) >= 0;
     }
 }
