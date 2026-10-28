@@ -1,5 +1,6 @@
 package com.example.BalisongFlipping.implementation;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.security.SecureRandom;
@@ -24,17 +25,18 @@ import com.example.BalisongFlipping.dtos.GoogleSignInResult;
 import com.example.BalisongFlipping.dtos.LoginAccountDto;
 import com.example.BalisongFlipping.dtos.RegisterAccountDto;
 import com.example.BalisongFlipping.utils.ProfanityFilter;
+import com.example.BalisongFlipping.utils.RateLimiter;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.collections.Collection;
-import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
-import com.example.BalisongFlipping.repositories.EmailTokenRepository;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.AuthService;
 import com.example.BalisongFlipping.services.EmailService;
+import com.example.BalisongFlipping.services.VerificationCodeService;
 
 @Service
 public class AuthServiceImplementation implements AuthService {
@@ -49,7 +51,12 @@ public class AuthServiceImplementation implements AuthService {
     private EmailService emailService;
 
     @Autowired
-    private EmailTokenRepository emailTokenRepository;
+    private VerificationCodeService verificationCodeService;
+
+    private static final int MAX_LOGIN_ATTEMPTS_PER_EMAIL = 10;
+    private static final Duration LOGIN_ATTEMPT_WINDOW = Duration.ofMinutes(15);
+
+    private final RateLimiter loginRateLimiter = new RateLimiter();
 
     @Value("${admin.bootstrap.email:}")
     private String adminBootstrapEmail;
@@ -102,21 +109,36 @@ public class AuthServiceImplementation implements AuthService {
                 accountService.generateIdentifierCode(newUser.displayName()));
     }
 
-    private void sendEmailVerification(String userEmail) throws Exception {
-        EmailVerificationToken token = emailService.createNewEmailVerificationToken(userEmail); 
-        emailService.sendEmail(userEmail, "Email Verification", "Your verification code is\n -> " + token.getToken() + " <-");
+    private void sendEmailVerification(Account account) {
+        String code = verificationCodeService.issue(account);
+        emailService.sendEmail(account.getEmail(), "Email Verification", "Your verification code is\n -> " + code + " <-");
+    }
+
+    private void requireLoginAttemptAllowed(String email) {
+        if (!loginRateLimiter.tryAcquire(String.valueOf(email).toLowerCase(), MAX_LOGIN_ATTEMPTS_PER_EMAIL, LOGIN_ATTEMPT_WINDOW))
+            throw new TooManyRequestsException("Too many login attempts. Please wait a few minutes and try again.");
     }
 
     @Override
     public void reSendEmailToken(String email) throws Exception {
-        EmailVerificationToken newToken = emailService.createReplacementEmailVerificationToken(email); 
-        emailService.sendEmail(email, "Email Verification", "Your verification code is\n -> " + newToken.getToken() + " <-");
+        Account account = accountRepository.findAccountByEmail(email)
+                .orElseThrow(() -> new Exception("Account not found."));
+        sendEmailVerification(account);
     }
 
     @Override
-    public Boolean validateEmailVerification(String emailToken) throws Exception {
-        return emailService.validateEmailTokenVerification(emailToken); 
-    }   
+    public Boolean validateEmailVerification(String email, String code) throws Exception {
+        // legacy clients send only the code; drop this branch once the frontend always sends the email
+        if (email == null) return emailService.validateEmailTokenVerification(code);
+
+        Optional<Account> account = accountRepository.findAccountByEmail(email);
+        if (account.isEmpty()) return false;
+
+        verificationCodeService.verify(account.get(), code);
+        account.get().setEmailVerified(true);
+        accountRepository.save(account.get());
+        return true;
+    }
 
     /***
      *
@@ -193,7 +215,7 @@ public class AuthServiceImplementation implements AuthService {
         if (isAdminEmail) {
             sendAdminLoginCode(saved);
         } else {
-            sendEmailVerification(saved.getEmail());
+            sendEmailVerification(saved);
         }
 
         return saved;
@@ -210,6 +232,8 @@ public class AuthServiceImplementation implements AuthService {
      */
     @Override
     public Account authenticate(LoginAccountDto loginInfo) {
+        requireLoginAttemptAllowed(loginInfo.email());
+
         // checked before password verification (same order Spring Security's own
         // UserDetails checks would run in) so the message can include the reason/expiry
         // instead of Spring's generic "account locked"/"account disabled" text
@@ -289,15 +313,12 @@ public class AuthServiceImplementation implements AuthService {
         Optional<Account> account = accountRepository.findAccountByEmail(email);
         if (account.isEmpty()) return; // don't leak whether the email exists
 
-        emailTokenRepository.deleteByOwner_Id(account.get().getId());
-
-        EmailVerificationToken token = new EmailVerificationToken(account.get());
-        emailTokenRepository.save(token);
+        String code = verificationCodeService.issue(account.get());
 
         emailService.sendEmail(
                 email,
                 "Balisong Flipping Hub — Password Reset Code",
-                "Your password reset code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+                "Your password reset code is: " + code + "\n\nThis code expires in 10 minutes."
         );
     }
 
@@ -310,16 +331,8 @@ public class AuthServiceImplementation implements AuthService {
         Account account = accountRepository.findAccountByEmail(dto.email())
                 .orElseThrow(() -> new Exception("Invalid code."));
 
-        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
-                .orElseThrow(() -> new Exception("Invalid code."));
+        verificationCodeService.verify(account, dto.code());
 
-        if (!token.getOwner().getId().equals(account.getId()))
-            throw new Exception("Invalid code.");
-
-        if (token.getExpiration().isBefore(java.time.Instant.now()))
-            throw new Exception("Code has expired. Please request a new one.");
-
-        emailTokenRepository.delete(token);
         account.setPassword(passwordEncoder.encode(dto.newPassword()));
         accountRepository.save(account);
     }
@@ -327,15 +340,12 @@ public class AuthServiceImplementation implements AuthService {
     @Override
     @Transactional
     public void sendAdminLoginCode(Account account) throws Exception {
-        emailTokenRepository.deleteByOwner_Id(account.getId());
-
-        EmailVerificationToken token = new EmailVerificationToken(account);
-        emailTokenRepository.save(token);
+        String code = verificationCodeService.issue(account);
 
         emailService.sendEmail(
                 account.getEmail(),
                 "Balisong Flipping Hub — Admin Login Code",
-                "Your admin login code is: " + token.getToken() + "\n\nThis code expires in 10 minutes.\n\n" +
+                "Your admin login code is: " + code + "\n\nThis code expires in 10 minutes.\n\n" +
                 "If you did not just try to log in, secure your account immediately."
         );
     }
@@ -343,21 +353,13 @@ public class AuthServiceImplementation implements AuthService {
     @Override
     @Transactional
     public Account verifyAdminLoginCode(String email, String code) throws Exception {
-        EmailVerificationToken token = emailTokenRepository.findByToken(code)
+        requireLoginAttemptAllowed(email);
+
+        Account account = accountRepository.findAccountByEmail(email)
+                .filter(a -> "ADMIN".equals(a.getRole()))
                 .orElseThrow(() -> new Exception("Invalid code."));
 
-        Account account = token.getOwner();
-
-        if (!account.getEmail().equalsIgnoreCase(email))
-            throw new Exception("Invalid code.");
-
-        if (token.getExpiration().isBefore(java.time.Instant.now()))
-            throw new Exception("Code has expired. Please log in again.");
-
-        if (!"ADMIN".equals(account.getRole()))
-            throw new Exception("Invalid code.");
-
-        emailTokenRepository.delete(token);
+        verificationCodeService.verify(account, code);
 
         if (!account.getEmailVerified()) {
             account.setEmailVerified(true);

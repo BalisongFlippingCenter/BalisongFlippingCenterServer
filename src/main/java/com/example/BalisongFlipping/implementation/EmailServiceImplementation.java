@@ -37,30 +37,6 @@ public class EmailServiceImplementation implements EmailService {
     }
 
     @Override
-    public EmailVerificationToken createNewEmailVerificationToken(String userEmail) throws Exception {
-        Account foundAccount = accountRepository.findAccountByEmail(userEmail)
-                .orElseThrow(() -> new Exception("Account not found."));
-        EmailVerificationToken t = new EmailVerificationToken();
-        t.setOwner(foundAccount);
-        t.setExpiration(Instant.now().plusMillis(600000));
-        t.setToken(t.generateToken());
-        return emailTokenRepository.save(t);
-    }
-
-    @Override
-    public EmailVerificationToken createReplacementEmailVerificationToken(String email) throws Exception {
-        Account foundAccount = accountRepository.findAccountByEmail(email)
-                .orElseThrow(() -> new Exception("Account not found."));
-        emailTokenRepository.deleteByOwner_Id(foundAccount.getId());
-
-        EmailVerificationToken t = new EmailVerificationToken();
-        t.setOwner(foundAccount);
-        t.setExpiration(Instant.now().plusMillis(600000));
-        t.setToken(t.generateToken());
-        return emailTokenRepository.save(t);
-    }
-
-    @Override
     public Boolean validateEmailTokenVerification(String emailToken) throws Exception {
         Optional<EmailVerificationToken> foundToken = emailTokenRepository.findByToken(emailToken);
 

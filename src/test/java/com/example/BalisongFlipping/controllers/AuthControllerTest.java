@@ -16,6 +16,7 @@ import com.example.BalisongFlipping.services.AuthService;
 import com.example.BalisongFlipping.services.CollectionService;
 import com.example.BalisongFlipping.services.JwtService;
 import com.example.BalisongFlipping.services.RefreshTokenService;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -408,21 +409,49 @@ class AuthControllerTest {
     }
 
     @Test
-    void verifyEmailTokenSucceedsForValidToken() throws Exception {
-        when(authenticationService.validateEmailVerification("good-token")).thenReturn(true);
+    void resendEmailTokenReturns429WhenRateLimited() throws Exception {
+        doThrow(new TooManyRequestsException("Too many codes requested. Please wait a few minutes and try again."))
+                .when(authenticationService).reSendEmailToken("flipper@example.com");
 
-        mockMvc.perform(get("/auth/verify-email-token/{token}", "good-token"))
+        mockMvc.perform(post("/auth/resend-email-token/{email}", "flipper@example.com"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(content().string("Too many codes requested. Please wait a few minutes and try again."));
+    }
+
+    @Test
+    void verifyEmailTokenSucceedsForValidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("flipper@example.com", "123456")).thenReturn(true);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "123456").param("email", "flipper@example.com"))
                 .andExpect(status().isAccepted())
                 .andExpect(content().string("Success"));
     }
 
     @Test
-    void verifyEmailTokenRejectsInvalidToken() throws Exception {
-        when(authenticationService.validateEmailVerification("bad-token")).thenReturn(false);
+    void verifyEmailTokenWithoutEmailPassesNull() throws Exception {
+        when(authenticationService.validateEmailVerification(null, "123456")).thenReturn(true);
 
-        mockMvc.perform(get("/auth/verify-email-token/{token}", "bad-token"))
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "123456"))
+                .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void verifyEmailTokenRejectsInvalidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("nobody@example.com", "bad-token")).thenReturn(false);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "bad-token").param("email", "nobody@example.com"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Verification Failed"));
+    }
+
+    @Test
+    void verifyEmailTokenReturnsTheCodeErrorMessage() throws Exception {
+        when(authenticationService.validateEmailVerification("flipper@example.com", "000000"))
+                .thenThrow(new Exception("Invalid code."));
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "000000").param("email", "flipper@example.com"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Invalid code."));
     }
 
     @Test

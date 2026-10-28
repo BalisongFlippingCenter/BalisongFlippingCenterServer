@@ -12,9 +12,9 @@ import com.example.BalisongFlipping.enums.reports.TargetType;
 import com.example.BalisongFlipping.modals.follows.Follow;
 import com.example.BalisongFlipping.modals.follows.FollowId;
 import com.example.BalisongFlipping.services.NotificationService;
-import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.*;
 import com.example.BalisongFlipping.services.EmailService;
+import com.example.BalisongFlipping.services.VerificationCodeService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.example.BalisongFlipping.repositories.CommentRepository;
 import com.example.BalisongFlipping.repositories.PostLikeRepository;
@@ -45,6 +45,7 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Autowired private PostLikeRepository postLikeRepository;
     @Autowired private CommentLikeRepository commentLikeRepository;
     @Autowired private EmailService emailService;
+    @Autowired private VerificationCodeService verificationCodeService;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private FollowRepository followRepository;
     @Autowired private NotificationService notificationService;
@@ -445,15 +446,12 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Transactional
     public void requestEmailChange(String accountId) throws Exception {
         User user = getUser(accountId);
-        emailTokenRepository.deleteByOwner_Id(user.getId());
-
-        EmailVerificationToken token = new EmailVerificationToken(user);
-        emailTokenRepository.save(token);
+        String code = verificationCodeService.issue(user);
 
         emailService.sendEmail(
                 user.getEmail(),
                 "Balisong Flipping Hub — Email Change Code",
-                "Your verification code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+                "Your verification code is: " + code + "\n\nThis code expires in 10 minutes."
         );
     }
 
@@ -468,16 +466,8 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
         User user = getUser(accountId);
 
-        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
-                .orElseThrow(() -> new Exception("Invalid code."));
+        verificationCodeService.verify(user, dto.code());
 
-        if (!token.getOwner().getId().equals(user.getId()))
-            throw new Exception("Invalid code.");
-
-        if (token.getExpiration().isBefore(java.time.Instant.now()))
-            throw new Exception("Code has expired. Please request a new one.");
-
-        emailTokenRepository.delete(token);
         user.setEmail(dto.newEmail());
         return toUserDto(accountRepository.save(user));
     }
@@ -486,15 +476,12 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
     @Transactional
     public void requestPasswordChange(String accountId) throws Exception {
         User user = getUser(accountId);
-        emailTokenRepository.deleteByOwner_Id(user.getId());
-
-        EmailVerificationToken token = new EmailVerificationToken(user);
-        emailTokenRepository.save(token);
+        String code = verificationCodeService.issue(user);
 
         emailService.sendEmail(
                 user.getEmail(),
                 "Balisong Flipping Hub — Password Change Code",
-                "Your verification code is: " + token.getToken() + "\n\nThis code expires in 10 minutes."
+                "Your verification code is: " + code + "\n\nThis code expires in 10 minutes."
         );
     }
 
@@ -506,16 +493,8 @@ public class AccountServiceImplementation implements com.example.BalisongFlippin
 
         User user = getUser(accountId);
 
-        EmailVerificationToken token = emailTokenRepository.findByToken(dto.code())
-                .orElseThrow(() -> new Exception("Invalid code."));
+        verificationCodeService.verify(user, dto.code());
 
-        if (!token.getOwner().getId().equals(user.getId()))
-            throw new Exception("Invalid code.");
-
-        if (token.getExpiration().isBefore(java.time.Instant.now()))
-            throw new Exception("Code has expired. Please request a new one.");
-
-        emailTokenRepository.delete(token);
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         accountRepository.save(user);
     }
