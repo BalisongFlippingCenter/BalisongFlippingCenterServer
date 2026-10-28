@@ -7,6 +7,7 @@ import com.example.BalisongFlipping.dtos.UpdatePreferencesDto;
 import com.example.BalisongFlipping.dtos.UpdateSocialLinksDto;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.S3Service;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -238,6 +239,8 @@ public class AccountController {
             String accountId = accountService.getSelf().id();
             accountService.requestEmailChange(accountId);
             return ResponseEntity.ok("Verification code sent to your current email.");
+        } catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
         } catch (Exception e) {
             log.error("POST /me/request-email-change -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
@@ -261,6 +264,8 @@ public class AccountController {
             String accountId = accountService.getSelf().id();
             accountService.requestPasswordChange(accountId);
             return ResponseEntity.ok("Verification code sent to your email.");
+        } catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
         } catch (Exception e) {
             log.error("POST /me/request-password-change -> {}", e.getMessage());
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);

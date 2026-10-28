@@ -8,6 +8,7 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
 import com.example.BalisongFlipping.services.*;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.web.client.HttpClientErrorException;
@@ -57,21 +58,25 @@ public class AuthController {
 
     @PostMapping("/resend-email-token/{email}")
     public ResponseEntity<?> resendEmailToken(@PathVariable String email) throws Exception {
-        System.out.println("Email: " + email); 
-        authenticationService.reSendEmailToken(email);
-        return new ResponseEntity<>("Success", HttpStatus.valueOf(200)); 
+        try {
+            authenticationService.reSendEmailToken(email);
+            return new ResponseEntity<>("Success", HttpStatus.valueOf(200));
+        }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
+        }
     }
 
     @GetMapping("/verify-email-token/{token}")
-    public ResponseEntity<?> verifyEmailToken(@PathVariable String token) throws Exception {
-
-        log.trace("Accessing verification end point with token: " + token);
-        
-        if (authenticationService.validateEmailVerification(token)) {
-            return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
-        }
-        else {
+    public ResponseEntity<?> verifyEmailToken(@PathVariable String token, @RequestParam(required = false) String email) {
+        try {
+            if (authenticationService.validateEmailVerification(email, token)) {
+                return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
+            }
             return new ResponseEntity<>("Verification Failed", HttpStatus.UNAUTHORIZED);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -219,6 +224,9 @@ public class AuthController {
             // banned / suspended -- message already carries the reason and (for suspensions) the expiry
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
+        }
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> {}", e.getMessage(), e);
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
@@ -230,6 +238,9 @@ public class AuthController {
         try {
             Account account = authenticationService.verifyAdminLoginCode(dto.email(), dto.code());
             return new ResponseEntity<>(buildLoginResponse(account, response), HttpStatus.OK);
+        }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
         }
         catch (Exception e) {
             log.error("Exception caught /verify-admin-login PostMapping -> {}", e.getMessage());

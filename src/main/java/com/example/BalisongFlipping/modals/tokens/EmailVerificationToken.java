@@ -23,6 +23,9 @@ public class EmailVerificationToken {
     @JoinColumn(name = "owner_id", nullable = false)
     private Account owner;
 
+    @Column(nullable = false)
+    private int failedAttempts;
+
     public EmailVerificationToken() {}
 
     public EmailVerificationToken(Account u) {
@@ -51,4 +54,7 @@ public class EmailVerificationToken {
 
     public Account getOwner() { return owner; }
     public void setOwner(Account owner) { this.owner = owner; }
+
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
 }
