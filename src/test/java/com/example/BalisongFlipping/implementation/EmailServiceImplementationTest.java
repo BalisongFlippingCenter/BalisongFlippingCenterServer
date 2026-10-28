@@ -63,42 +63,6 @@ class EmailServiceImplementationTest {
     }
 
     @Test
-    void createNewEmailVerificationTokenSucceeds() throws Exception {
-        User u = user(1L, "flipper@example.com");
-        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(u));
-        when(emailTokenRepository.save(any(EmailVerificationToken.class))).thenAnswer(i -> i.getArgument(0));
-
-        EmailVerificationToken token = emailService.createNewEmailVerificationToken("flipper@example.com");
-
-        assertEquals(u, token.getOwner());
-        assertTrue(token.getExpiration().isAfter(Instant.now()));
-    }
-
-    @Test
-    void createNewEmailVerificationTokenRejectsUnknownEmail() {
-        when(accountRepository.findAccountByEmail("nobody@example.com")).thenReturn(Optional.empty());
-        assertThrows(Exception.class, () -> emailService.createNewEmailVerificationToken("nobody@example.com"));
-    }
-
-    @Test
-    void createReplacementEmailVerificationTokenDeletesOldTokenFirst() throws Exception {
-        User u = user(1L, "flipper@example.com");
-        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(u));
-        when(emailTokenRepository.save(any(EmailVerificationToken.class))).thenAnswer(i -> i.getArgument(0));
-
-        EmailVerificationToken token = emailService.createReplacementEmailVerificationToken("flipper@example.com");
-
-        verify(emailTokenRepository).deleteByOwner_Id(1L);
-        assertEquals(u, token.getOwner());
-    }
-
-    @Test
-    void createReplacementEmailVerificationTokenRejectsUnknownEmail() {
-        when(accountRepository.findAccountByEmail("nobody@example.com")).thenReturn(Optional.empty());
-        assertThrows(Exception.class, () -> emailService.createReplacementEmailVerificationToken("nobody@example.com"));
-    }
-
-    @Test
     void validateEmailTokenVerificationSucceedsAndMarksAccountVerified() throws Exception {
         User u = user(1L, "flipper@example.com");
         u.setEmailVerified(false);

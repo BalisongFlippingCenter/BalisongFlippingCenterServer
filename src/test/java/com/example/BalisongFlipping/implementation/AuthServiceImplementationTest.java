@@ -7,12 +7,12 @@ import com.example.BalisongFlipping.dtos.RegisterAccountDto;
 import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.collections.Collection;
-import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
-import com.example.BalisongFlipping.repositories.EmailTokenRepository;
 import com.example.BalisongFlipping.services.AccountService;
 import com.example.BalisongFlipping.services.EmailService;
+import com.example.BalisongFlipping.services.VerificationCodeService;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,7 +57,7 @@ class AuthServiceImplementationTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private AccountService accountService;
     @Mock private EmailService emailService;
-    @Mock private EmailTokenRepository emailTokenRepository;
+    @Mock private VerificationCodeService verificationCodeService;
     @Mock private RestTemplate restTemplate;
 
     private AuthServiceImplementation authService;
@@ -65,7 +67,7 @@ class AuthServiceImplementationTest {
         authService = new AuthServiceImplementation(accountRepository, collectionRepository, authenticationManager, passwordEncoder);
         ReflectionTestUtils.setField(authService, "accountService", accountService);
         ReflectionTestUtils.setField(authService, "emailService", emailService);
-        ReflectionTestUtils.setField(authService, "emailTokenRepository", emailTokenRepository);
+        ReflectionTestUtils.setField(authService, "verificationCodeService", verificationCodeService);
         ReflectionTestUtils.setField(authService, "restTemplate", restTemplate);
         ReflectionTestUtils.setField(authService, "adminBootstrapEmail", "");
     }
@@ -142,14 +144,13 @@ class AuthServiceImplementationTest {
             c.setId(5L);
             return c;
         });
-        when(emailService.createNewEmailVerificationToken("flipper@example.com"))
-                .thenReturn(new EmailVerificationToken(new User()));
+        when(verificationCodeService.issue(any())).thenReturn("123456");
 
         Account saved = authService.signup(registerDto("flipper@example.com", "Flipper", "correct-password"));
 
         assertEquals("USER", saved.getRole());
         assertFalse(saved.getEmailVerified());
-        verify(emailService).sendEmail(eq("flipper@example.com"), eq("Email Verification"), anyString());
+        verify(emailService).sendEmail(eq("flipper@example.com"), eq("Email Verification"), contains("123456"));
         verify(emailService, never()).sendEmail(eq("flipper@example.com"), eq("Balisong Flipping Hub — Admin Login Code"), anyString());
     }
 
@@ -174,7 +175,7 @@ class AuthServiceImplementationTest {
 
         assertEquals("ADMIN", saved.getRole());
         verify(emailService).sendEmail(eq("admin@example.com"), eq("Balisong Flipping Hub — Admin Login Code"), anyString());
-        verify(emailService, never()).createNewEmailVerificationToken(anyString());
+        verify(emailService, never()).sendEmail(eq("admin@example.com"), eq("Email Verification"), anyString());
     }
 
     // -------------------------------------------------------------------------
@@ -233,6 +234,22 @@ class AuthServiceImplementationTest {
 
         assertThrows(BadCredentialsException.class,
                 () -> authService.authenticate(new LoginAccountDto("flipper@example.com", "wrong-password")));
+    }
+
+    @Test
+    void authenticateBlocksAfterTenAttemptsForTheSameEmail() {
+        when(accountRepository.findAccountByEmail(anyString())).thenReturn(Optional.empty());
+        when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+
+        for (int i = 0; i < 10; i++) {
+            assertThrows(BadCredentialsException.class,
+                    () -> authService.authenticate(new LoginAccountDto("flipper@example.com", "wrong-password")));
+        }
+
+        assertThrows(TooManyRequestsException.class,
+                () -> authService.authenticate(new LoginAccountDto("FLIPPER@example.com", "wrong-password")));
+        assertThrows(BadCredentialsException.class,
+                () -> authService.authenticate(new LoginAccountDto("other@example.com", "wrong-password")));
     }
 
     // -------------------------------------------------------------------------
@@ -300,6 +317,69 @@ class AuthServiceImplementationTest {
     }
 
     // -------------------------------------------------------------------------
+    // email verification
+    // -------------------------------------------------------------------------
+
+    @Test
+    void reSendEmailTokenIssuesAndEmailsANewCode() throws Exception {
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(activeUser()));
+        when(verificationCodeService.issue(any())).thenReturn("654321");
+
+        authService.reSendEmailToken("flipper@example.com");
+
+        verify(emailService).sendEmail(eq("flipper@example.com"), eq("Email Verification"), contains("654321"));
+    }
+
+    @Test
+    void reSendEmailTokenRejectsUnknownEmail() {
+        when(accountRepository.findAccountByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+        assertThrows(Exception.class, () -> authService.reSendEmailToken("nobody@example.com"));
+        verify(verificationCodeService, never()).issue(any());
+    }
+
+    @Test
+    void validateEmailVerificationChecksTheCodeAgainstThatAccount() throws Exception {
+        User user = activeUser();
+        user.setEmailVerified(false);
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
+
+        assertTrue(authService.validateEmailVerification("flipper@example.com", "123456"));
+
+        verify(verificationCodeService).verify(user, "123456");
+        assertTrue(user.getEmailVerified());
+        verify(accountRepository).save(user);
+    }
+
+    @Test
+    void validateEmailVerificationLeavesAccountUnverifiedWhenCodeIsWrong() throws Exception {
+        User user = activeUser();
+        user.setEmailVerified(false);
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
+        doThrow(new Exception("Invalid code.")).when(verificationCodeService).verify(user, "000000");
+
+        assertThrows(Exception.class, () -> authService.validateEmailVerification("flipper@example.com", "000000"));
+        assertFalse(user.getEmailVerified());
+        verify(accountRepository, never()).save(any());
+    }
+
+    @Test
+    void validateEmailVerificationReturnsFalseForUnknownEmail() throws Exception {
+        when(accountRepository.findAccountByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+        assertFalse(authService.validateEmailVerification("nobody@example.com", "123456"));
+        verify(verificationCodeService, never()).verify(any(), anyString());
+    }
+
+    @Test
+    void validateEmailVerificationWithoutEmailFallsBackToLegacyLookup() throws Exception {
+        when(emailService.validateEmailTokenVerification("123456")).thenReturn(true);
+
+        assertTrue(authService.validateEmailVerification(null, "123456"));
+        verify(verificationCodeService, never()).verify(any(), anyString());
+    }
+
+    // -------------------------------------------------------------------------
     // forgotPassword / confirmForgotPassword
     // -------------------------------------------------------------------------
 
@@ -307,12 +387,11 @@ class AuthServiceImplementationTest {
     void forgotPasswordSendsResetCodeForKnownEmail() throws Exception {
         User user = activeUser();
         when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
+        when(verificationCodeService.issue(user)).thenReturn("123456");
 
         authService.forgotPassword("flipper@example.com");
 
-        verify(emailTokenRepository).deleteByOwner_Id(1L);
-        verify(emailTokenRepository).save(any(EmailVerificationToken.class));
-        verify(emailService).sendEmail(eq("flipper@example.com"), anyString(), anyString());
+        verify(emailService).sendEmail(eq("flipper@example.com"), anyString(), contains("123456"));
     }
 
     @Test
@@ -321,7 +400,7 @@ class AuthServiceImplementationTest {
 
         authService.forgotPassword("nobody@example.com");
 
-        verify(emailTokenRepository, never()).save(any());
+        verify(verificationCodeService, never()).issue(any());
         verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
     }
 
@@ -335,42 +414,36 @@ class AuthServiceImplementationTest {
     @Test
     void confirmForgotPasswordSucceeds() throws Exception {
         User user = activeUser();
-        EmailVerificationToken token = new EmailVerificationToken(user);
         when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
         when(passwordEncoder.encode("new-password")).thenReturn("hashed-new");
 
         authService.confirmForgotPassword(new ConfirmForgotPasswordDto("flipper@example.com", "123456", "new-password"));
 
-        verify(emailTokenRepository).delete(token);
+        verify(verificationCodeService).verify(user, "123456");
         assertEquals("hashed-new", user.getPassword());
     }
 
     @Test
-    void confirmForgotPasswordRejectsExpiredCode() {
+    void confirmForgotPasswordKeepsOldPasswordWhenCodeIsWrong() throws Exception {
         User user = activeUser();
-        EmailVerificationToken token = new EmailVerificationToken(user);
-        token.setExpiration(Instant.now().minusSeconds(60));
+        user.setPassword("hashed-old");
         when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        doThrow(new Exception("Invalid code.")).when(verificationCodeService).verify(user, "000000");
 
         Exception ex = assertThrows(Exception.class, () -> authService.confirmForgotPassword(
-                new ConfirmForgotPasswordDto("flipper@example.com", "123456", "new-password")));
-        assertEquals("Code has expired. Please request a new one.", ex.getMessage());
+                new ConfirmForgotPasswordDto("flipper@example.com", "000000", "new-password")));
+        assertEquals("Invalid code.", ex.getMessage());
+        assertEquals("hashed-old", user.getPassword());
     }
 
     @Test
-    void confirmForgotPasswordRejectsTokenBelongingToDifferentAccount() {
-        User user = activeUser();
-        User otherUser = activeUser();
-        otherUser.setId(2L);
-        EmailVerificationToken token = new EmailVerificationToken(otherUser);
-        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+    void confirmForgotPasswordRejectsUnknownEmail() throws Exception {
+        when(accountRepository.findAccountByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
         Exception ex = assertThrows(Exception.class, () -> authService.confirmForgotPassword(
-                new ConfirmForgotPasswordDto("flipper@example.com", "123456", "new-password")));
+                new ConfirmForgotPasswordDto("nobody@example.com", "123456", "new-password")));
         assertEquals("Invalid code.", ex.getMessage());
+        verify(verificationCodeService, never()).verify(any(), anyString());
     }
 
     // -------------------------------------------------------------------------
@@ -378,15 +451,14 @@ class AuthServiceImplementationTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void sendAdminLoginCodeSavesTokenAndSendsEmail() throws Exception {
+    void sendAdminLoginCodeIssuesCodeAndSendsEmail() throws Exception {
         User admin = activeUser();
         admin.setRole("ADMIN");
+        when(verificationCodeService.issue(admin)).thenReturn("123456");
 
         authService.sendAdminLoginCode(admin);
 
-        verify(emailTokenRepository).deleteByOwner_Id(1L);
-        verify(emailTokenRepository).save(any(EmailVerificationToken.class));
-        verify(emailService).sendEmail(eq("flipper@example.com"), eq("Balisong Flipping Hub — Admin Login Code"), anyString());
+        verify(emailService).sendEmail(eq("flipper@example.com"), eq("Balisong Flipping Hub — Admin Login Code"), contains("123456"));
     }
 
     @Test
@@ -394,48 +466,43 @@ class AuthServiceImplementationTest {
         User admin = activeUser();
         admin.setRole("ADMIN");
         admin.setEmailVerified(false);
-        EmailVerificationToken token = new EmailVerificationToken(admin);
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(admin));
 
         Account result = authService.verifyAdminLoginCode("flipper@example.com", "123456");
 
         assertEquals(admin, result);
+        verify(verificationCodeService).verify(admin, "123456");
         verify(accountRepository).save(admin);
-        verify(emailTokenRepository).delete(token);
         verify(emailService).sendEmail(eq("flipper@example.com"), eq("Balisong Flipping Hub — Admin Login Successful"), anyString());
     }
 
     @Test
-    void verifyAdminLoginCodeRejectsNonAdminAccount() {
+    void verifyAdminLoginCodeRejectsNonAdminAccount() throws Exception {
         User user = activeUser();
         user.setRole("USER");
-        EmailVerificationToken token = new EmailVerificationToken(user);
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(user));
 
         Exception ex = assertThrows(Exception.class, () -> authService.verifyAdminLoginCode("flipper@example.com", "123456"));
         assertEquals("Invalid code.", ex.getMessage());
+        verify(verificationCodeService, never()).verify(any(), anyString());
     }
 
     @Test
-    void verifyAdminLoginCodeRejectsEmailMismatch() {
-        User admin = activeUser();
-        admin.setRole("ADMIN");
-        EmailVerificationToken token = new EmailVerificationToken(admin);
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+    void verifyAdminLoginCodeRejectsUnknownEmail() {
+        when(accountRepository.findAccountByEmail("someoneelse@example.com")).thenReturn(Optional.empty());
 
         Exception ex = assertThrows(Exception.class, () -> authService.verifyAdminLoginCode("someoneelse@example.com", "123456"));
         assertEquals("Invalid code.", ex.getMessage());
     }
 
     @Test
-    void verifyAdminLoginCodeRejectsExpiredToken() {
+    void verifyAdminLoginCodePropagatesWrongCode() throws Exception {
         User admin = activeUser();
         admin.setRole("ADMIN");
-        EmailVerificationToken token = new EmailVerificationToken(admin);
-        token.setExpiration(Instant.now().minusSeconds(60));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        when(accountRepository.findAccountByEmail("flipper@example.com")).thenReturn(Optional.of(admin));
+        doThrow(new Exception("Invalid code.")).when(verificationCodeService).verify(admin, "000000");
 
-        Exception ex = assertThrows(Exception.class, () -> authService.verifyAdminLoginCode("flipper@example.com", "123456"));
-        assertEquals("Code has expired. Please log in again.", ex.getMessage());
+        assertThrows(Exception.class, () -> authService.verifyAdminLoginCode("flipper@example.com", "000000"));
+        verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
     }
 }
