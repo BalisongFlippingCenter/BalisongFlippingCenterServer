@@ -18,7 +18,7 @@ Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack co
 | Framework | Spring Boot 3.2.5 |
 | ORM | Spring Data JPA + Hibernate 6 |
 | Database | PostgreSQL 16 (containerized via Docker) |
-| Schema migrations | Flyway (V1–V27) |
+| Schema migrations | Flyway (V1–V28) |
 | Auth | JWT (`jjwt` 0.11.5) + refresh tokens (7-day expiry) |
 | File storage | AWS S3 (SDK v2 — `S3Client` + `S3Presigner`, fully wired) |
 | Email | Spring Mail (JavaMailSender over Gmail SMTP; the instance role also allows SES, which is unused) |
