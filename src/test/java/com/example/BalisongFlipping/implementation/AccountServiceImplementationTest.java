@@ -11,7 +11,6 @@ import com.example.BalisongFlipping.dtos.UserSearchResultDto;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.follows.Follow;
 import com.example.BalisongFlipping.modals.follows.FollowId;
-import com.example.BalisongFlipping.modals.tokens.EmailVerificationToken;
 import com.example.BalisongFlipping.repositories.AccountRepository;
 import com.example.BalisongFlipping.repositories.CollectionKnifeRepository;
 import com.example.BalisongFlipping.repositories.CollectionRepository;
@@ -24,6 +23,7 @@ import com.example.BalisongFlipping.repositories.PostsRepository;
 import com.example.BalisongFlipping.repositories.RefreshTokenRepository;
 import com.example.BalisongFlipping.services.EmailService;
 import com.example.BalisongFlipping.services.NotificationService;
+import com.example.BalisongFlipping.services.VerificationCodeService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,9 +46,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,6 +63,7 @@ class AccountServiceImplementationTest {
     @Mock private PostsRepository postsRepository;
     @Mock private RefreshTokenRepository refreshTokenRepository;
     @Mock private EmailTokenRepository emailTokenRepository;
+    @Mock private VerificationCodeService verificationCodeService;
     @Mock private CommentRepository commentRepository;
     @Mock private PostLikeRepository postLikeRepository;
     @Mock private CommentLikeRepository commentLikeRepository;
@@ -84,6 +87,7 @@ class AccountServiceImplementationTest {
         ReflectionTestUtils.setField(accountService, "postLikeRepository", postLikeRepository);
         ReflectionTestUtils.setField(accountService, "commentLikeRepository", commentLikeRepository);
         ReflectionTestUtils.setField(accountService, "emailService", emailService);
+        ReflectionTestUtils.setField(accountService, "verificationCodeService", verificationCodeService);
         ReflectionTestUtils.setField(accountService, "passwordEncoder", passwordEncoder);
         ReflectionTestUtils.setField(accountService, "followRepository", followRepository);
         ReflectionTestUtils.setField(accountService, "notificationService", notificationService);
@@ -513,28 +517,25 @@ class AccountServiceImplementationTest {
     void requestEmailChangeSendsCode() throws Exception {
         User u = user(1L);
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
+        when(verificationCodeService.issue(u)).thenReturn("123456");
 
         accountService.requestEmailChange("1");
 
-        verify(emailTokenRepository).deleteByOwner_Id(1L);
-        verify(emailTokenRepository).save(any(EmailVerificationToken.class));
-        verify(emailService).sendEmail(eq(u.getEmail()), anyString(), anyString());
+        verify(emailService).sendEmail(eq(u.getEmail()), anyString(), contains("123456"));
     }
 
     @Test
     void confirmEmailChangeSucceeds() throws Exception {
         User u = user(1L);
-        EmailVerificationToken token = new EmailVerificationToken(u);
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
         when(accountRepository.save(u)).thenReturn(u);
         when(accountRepository.findAccountByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
         when(followRepository.findByIdFollowerId(1L)).thenReturn(List.of());
 
         accountService.confirmEmailChange("1", new ConfirmEmailChangeDto("123456", "new@example.com"));
 
         assertEquals("new@example.com", u.getEmail());
-        verify(emailTokenRepository).delete(token);
+        verify(verificationCodeService).verify(u, "123456");
     }
 
     @Test
@@ -554,17 +555,17 @@ class AccountServiceImplementationTest {
     }
 
     @Test
-    void confirmEmailChangeRejectsExpiredCode() {
+    void confirmEmailChangeKeepsOldEmailWhenCodeIsWrong() throws Exception {
         User u = user(1L);
-        EmailVerificationToken token = new EmailVerificationToken(u);
-        token.setExpiration(Instant.now().minusSeconds(60));
+        String originalEmail = u.getEmail();
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
         when(accountRepository.findAccountByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        doThrow(new Exception("Invalid code.")).when(verificationCodeService).verify(u, "000000");
 
         Exception ex = assertThrows(Exception.class,
-                () -> accountService.confirmEmailChange("1", new ConfirmEmailChangeDto("123456", "new@example.com")));
-        assertEquals("Code has expired. Please request a new one.", ex.getMessage());
+                () -> accountService.confirmEmailChange("1", new ConfirmEmailChangeDto("000000", "new@example.com")));
+        assertEquals("Invalid code.", ex.getMessage());
+        assertEquals(originalEmail, u.getEmail());
     }
 
     // -------------------------------------------------------------------------
@@ -575,25 +576,23 @@ class AccountServiceImplementationTest {
     void requestPasswordChangeSendsCode() throws Exception {
         User u = user(1L);
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
+        when(verificationCodeService.issue(u)).thenReturn("123456");
 
         accountService.requestPasswordChange("1");
 
-        verify(emailTokenRepository).deleteByOwner_Id(1L);
-        verify(emailService).sendEmail(eq(u.getEmail()), anyString(), anyString());
+        verify(emailService).sendEmail(eq(u.getEmail()), anyString(), contains("123456"));
     }
 
     @Test
     void confirmPasswordChangeSucceeds() throws Exception {
         User u = user(1L);
-        EmailVerificationToken token = new EmailVerificationToken(u);
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
         when(passwordEncoder.encode("new-password")).thenReturn("hashed");
 
         accountService.confirmPasswordChange("1", new ConfirmPasswordChangeDto("123456", "new-password"));
 
         assertEquals("hashed", u.getPassword());
-        verify(emailTokenRepository).delete(token);
+        verify(verificationCodeService).verify(u, "123456");
     }
 
     @Test
@@ -604,16 +603,16 @@ class AccountServiceImplementationTest {
     }
 
     @Test
-    void confirmPasswordChangeRejectsCodeBelongingToDifferentAccount() {
+    void confirmPasswordChangeKeepsOldPasswordWhenCodeIsWrong() throws Exception {
         User u = user(1L);
-        User other = user(2L);
-        EmailVerificationToken token = new EmailVerificationToken(other);
+        u.setPassword("hashed-old");
         when(accountRepository.findById(1L)).thenReturn(Optional.of(u));
-        when(emailTokenRepository.findByToken("123456")).thenReturn(Optional.of(token));
+        doThrow(new Exception("Invalid code.")).when(verificationCodeService).verify(u, "000000");
 
         Exception ex = assertThrows(Exception.class,
-                () -> accountService.confirmPasswordChange("1", new ConfirmPasswordChangeDto("123456", "new-password")));
+                () -> accountService.confirmPasswordChange("1", new ConfirmPasswordChangeDto("000000", "new-password")));
         assertEquals("Invalid code.", ex.getMessage());
+        assertEquals("hashed-old", u.getPassword());
     }
 
     // -------------------------------------------------------------------------

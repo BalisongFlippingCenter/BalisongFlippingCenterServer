@@ -1,32 +1,20 @@
 package com.example.BalisongFlipping.services;
 
+import com.example.BalisongFlipping.utils.RateLimiter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.time.Duration;
 
 @Service
 public class AiRateLimiterService {
 
-    private static final long WINDOW_MILLIS = 60_000;
-
-    private record Window(long windowStartMillis, AtomicInteger count) {}
-
-    private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
+    private final RateLimiter rateLimiter = new RateLimiter();
 
     @Value("${ai.rate-limit.max-requests-per-minute}")
     private int maxRequestsPerMinute;
 
     public boolean tryAcquire(String sessionId) {
-        long now = System.currentTimeMillis();
-        Window window = windows.compute(sessionId, (id, existing) -> {
-            if (existing == null || now - existing.windowStartMillis() >= WINDOW_MILLIS) {
-                return new Window(now, new AtomicInteger(1));
-            }
-            existing.count().incrementAndGet();
-            return existing;
-        });
-        return window.count().get() <= maxRequestsPerMinute;
+        return rateLimiter.tryAcquire(sessionId, maxRequestsPerMinute, Duration.ofMinutes(1));
     }
 }

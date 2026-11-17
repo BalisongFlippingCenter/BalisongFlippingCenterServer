@@ -8,6 +8,7 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import com.example.BalisongFlipping.modals.accounts.User;
 import com.example.BalisongFlipping.modals.tokens.RefreshToken;
 import com.example.BalisongFlipping.services.*;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.web.client.HttpClientErrorException;
@@ -49,6 +50,16 @@ public class AuthController {
         this.authenticationService = authenticationService;
     }
 
+    private static ResponseCookie refreshTokenCookie(String value, Duration maxAge) {
+        return ResponseCookie.from("Refresh-Token-Cookie", value)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(maxAge)
+                .sameSite("Strict")
+                .build();
+    }
+
     @GetMapping("/check-token")
     public ResponseEntity<?> checkToken(@RequestParam String token) {
 
@@ -57,21 +68,25 @@ public class AuthController {
 
     @PostMapping("/resend-email-token/{email}")
     public ResponseEntity<?> resendEmailToken(@PathVariable String email) throws Exception {
-        System.out.println("Email: " + email); 
-        authenticationService.reSendEmailToken(email);
-        return new ResponseEntity<>("Success", HttpStatus.valueOf(200)); 
+        try {
+            authenticationService.reSendEmailToken(email);
+            return new ResponseEntity<>("Success", HttpStatus.valueOf(200));
+        }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
+        }
     }
 
     @GetMapping("/verify-email-token/{token}")
-    public ResponseEntity<?> verifyEmailToken(@PathVariable String token) throws Exception {
-
-        log.trace("Accessing verification end point with token: " + token);
-        
-        if (authenticationService.validateEmailVerification(token)) {
-            return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
-        }
-        else {
+    public ResponseEntity<?> verifyEmailToken(@PathVariable String token, @RequestParam String email) {
+        try {
+            if (authenticationService.validateEmailVerification(email, token)) {
+                return new ResponseEntity<>("Success", HttpStatus.ACCEPTED);
+            }
             return new ResponseEntity<>("Verification Failed", HttpStatus.UNAUTHORIZED);
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -168,13 +183,7 @@ public class AuthController {
             }
 
             // always expire the cookie regardless of whether a token was found
-            ResponseCookie expiredCookie = ResponseCookie.from("Refresh-Token-Cookie", "")
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ZERO)
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, expiredCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie("", Duration.ZERO).toString());
 
             return new ResponseEntity<>("Successfully logged out user.", HttpStatus.OK);
         }
@@ -219,6 +228,9 @@ public class AuthController {
             // banned / suspended -- message already carries the reason and (for suspensions) the expiry
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
+        }
         catch(Exception e) {
             log.error("Exception caught /login PostMapping -> {}", e.getMessage(), e);
             return new ResponseEntity<>("Failed: " + e.getMessage(), HttpStatus.CONFLICT);
@@ -230,6 +242,9 @@ public class AuthController {
         try {
             Account account = authenticationService.verifyAdminLoginCode(dto.email(), dto.code());
             return new ResponseEntity<>(buildLoginResponse(account, response), HttpStatus.OK);
+        }
+        catch (TooManyRequestsException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.TOO_MANY_REQUESTS);
         }
         catch (Exception e) {
             log.error("Exception caught /verify-admin-login PostMapping -> {}", e.getMessage());
@@ -247,18 +262,12 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(authenticatedUser.getEmail());
 
         // set refresh token in cookie
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
-                .httpOnly(true)
-                .path("/")
-                .maxAge(Duration.ofDays(7))
-                .sameSite("Lax")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(refreshToken.getToken(), Duration.ofDays(7)).toString());
 
         // get collection data
         CollectionDataDto collectionData = collectionService.getCollection(account.getCollectionId() != null ? account.getCollectionId().toString() : null);
 
-        return new LoginResponseDto(accessToken, refreshToken.getToken(), accountService.toUserDto(authenticatedUser), collectionData);
+        return new LoginResponseDto(accessToken, accountService.toUserDto(authenticatedUser), collectionData);
     }
 
     @PostMapping("/google")
@@ -271,20 +280,13 @@ public class AuthController {
             String accessToken = jwtService.generateAccessToken(account);
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(account.getEmail());
 
-            ResponseCookie refreshTokenCookie = ResponseCookie.from("Refresh-Token-Cookie", refreshToken.getToken())
-                    .httpOnly(true)
-                    .path("/")
-                    .maxAge(Duration.ofDays(7))
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie(refreshToken.getToken(), Duration.ofDays(7)).toString());
 
             CollectionDataDto collectionData = collectionService.getCollection(
                     user.getCollectionId() != null ? user.getCollectionId().toString() : null);
 
             return new ResponseEntity<>(new GoogleLoginResponseDto(
                     accessToken,
-                    refreshToken.getToken(),
                     accountService.toUserDto(account),
                     collectionData,
                     result.isNewUser()
@@ -333,11 +335,10 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token-login")
-    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request, @RequestBody(required = false) String tokenFromBody) throws Exception {
+    public ResponseEntity<?> authenticateWithRefreshToken(HttpServletRequest request) throws Exception {
         try {
             String refreshTokenValue = null;
 
-            // try cookie first
             Cookie[] cookies = request.getCookies();
             if (cookies != null) {
                 for (Cookie cookie : cookies) {
@@ -348,11 +349,6 @@ public class AuthController {
                 }
             }
 
-            // fall back to body (used when cross-origin cookie can't be sent)
-            if (refreshTokenValue == null && tokenFromBody != null && !tokenFromBody.isBlank()) {
-                refreshTokenValue = tokenFromBody.trim();
-            }
-
             if (refreshTokenValue == null) {
                 throw new Exception("No Refresh Token");
             }
@@ -361,7 +357,6 @@ public class AuthController {
 
             LoginResponseDto loginResponse = new LoginResponseDto(
                     jwtService.generateAccessToken(verifiedToken.getOwner()),
-                    verifiedToken.getToken(),
                     accountService.toUserDto(accountService.getAccount(verifiedToken.getOwner().getId().toString())),
                     collectionService.getCollectionByAccountId(verifiedToken.getOwner().getId().toString())
             );

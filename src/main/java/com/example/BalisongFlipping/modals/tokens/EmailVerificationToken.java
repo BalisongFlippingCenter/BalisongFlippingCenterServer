@@ -4,7 +4,7 @@ import com.example.BalisongFlipping.modals.accounts.Account;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Entity
 @Table(name = "email_verification_tokens")
@@ -23,6 +23,9 @@ public class EmailVerificationToken {
     @JoinColumn(name = "owner_id", nullable = false)
     private Account owner;
 
+    @Column(nullable = false)
+    private int failedAttempts;
+
     public EmailVerificationToken() {}
 
     public EmailVerificationToken(Account u) {
@@ -33,9 +36,9 @@ public class EmailVerificationToken {
 
     public String generateToken() {
         StringBuilder t = new StringBuilder();
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         for (int i = 0; i < 6; i++) {
-            t.append(random.nextInt(9) + 1);
+            t.append(random.nextInt(10));
         }
         return t.toString();
     }
@@ -51,4 +54,7 @@ public class EmailVerificationToken {
 
     public Account getOwner() { return owner; }
     public void setOwner(Account owner) { this.owner = owner; }
+
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
 }

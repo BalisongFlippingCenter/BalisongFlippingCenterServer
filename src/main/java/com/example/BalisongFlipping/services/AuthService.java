@@ -12,7 +12,7 @@ public interface AuthService {
 
     Account signup(RegisterAccountDto newUser) throws Exception;
     Account authenticate(LoginAccountDto loginInfo);
-    Boolean validateEmailVerification(String emailToken) throws Exception;
+    Boolean validateEmailVerification(String email, String code) throws Exception;
     void reSendEmailToken(String email) throws Exception;
 
     GoogleSignInResult googleSignIn(String googleAccessToken) throws Exception;

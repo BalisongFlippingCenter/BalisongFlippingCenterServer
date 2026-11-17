@@ -16,6 +16,7 @@ import com.example.BalisongFlipping.services.AuthService;
 import com.example.BalisongFlipping.services.CollectionService;
 import com.example.BalisongFlipping.services.JwtService;
 import com.example.BalisongFlipping.services.RefreshTokenService;
+import com.example.BalisongFlipping.utils.TooManyRequestsException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -121,8 +122,12 @@ class AuthControllerTest {
                         .content(loginBody("flipper@example.com", "correct-password")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token-123"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh-token-456"))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456")));
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("Secure"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"))));
     }
 
     @Test
@@ -275,6 +280,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(new VerifyAdminLoginDto("flipper@example.com", "123456"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token-123"))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
                 .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456")));
     }
 
@@ -329,7 +335,10 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/logout")
                         .cookie(new Cookie("Refresh-Token-Cookie", "refresh-token-456")))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("Max-Age=0"),
+                        org.hamcrest.Matchers.containsString("Secure"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"))));
 
         verify(refreshTokenService).removeRefreshToken("refresh-token-456");
     }
@@ -360,28 +369,18 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/refresh-token-login")
                         .cookie(new Cookie("Refresh-Token-Cookie", "refresh-token-456")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access-token-123"));
+                .andExpect(jsonPath("$.accessToken").value("access-token-123"))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
     }
 
     @Test
-    void refreshTokenLoginSucceedsViaBodyFallback() throws Exception {
-        User user = verifiedUser();
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken("refresh-token-456");
-        refreshToken.setOwner(user);
-
-        when(refreshTokenService.findByToken("refresh-token-456")).thenReturn(Optional.of(refreshToken));
-        when(refreshTokenService.verityExpiration(refreshToken)).thenReturn(refreshToken);
-        when(jwtService.generateAccessToken(user)).thenReturn("access-token-123");
-        when(accountService.getAccount("1")).thenReturn(user);
-        when(accountService.toUserDto(user)).thenReturn(userDto(user));
-        when(collectionService.getCollectionByAccountId("1")).thenReturn(null);
-
+    void refreshTokenLoginIgnoresTokenInBody() throws Exception {
         mockMvc.perform(post("/auth/refresh-token-login")
                         .contentType("text/plain")
                         .content("refresh-token-456"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access-token-123"));
+                .andExpect(status().isUnauthorized());
+
+        verify(refreshTokenService, never()).findByToken(any());
     }
 
     @Test
@@ -408,21 +407,49 @@ class AuthControllerTest {
     }
 
     @Test
-    void verifyEmailTokenSucceedsForValidToken() throws Exception {
-        when(authenticationService.validateEmailVerification("good-token")).thenReturn(true);
+    void resendEmailTokenReturns429WhenRateLimited() throws Exception {
+        doThrow(new TooManyRequestsException("Too many codes requested. Please wait a few minutes and try again."))
+                .when(authenticationService).reSendEmailToken("flipper@example.com");
 
-        mockMvc.perform(get("/auth/verify-email-token/{token}", "good-token"))
+        mockMvc.perform(post("/auth/resend-email-token/{email}", "flipper@example.com"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(content().string("Too many codes requested. Please wait a few minutes and try again."));
+    }
+
+    @Test
+    void verifyEmailTokenSucceedsForValidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("flipper@example.com", "123456")).thenReturn(true);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "123456").param("email", "flipper@example.com"))
                 .andExpect(status().isAccepted())
                 .andExpect(content().string("Success"));
     }
 
     @Test
-    void verifyEmailTokenRejectsInvalidToken() throws Exception {
-        when(authenticationService.validateEmailVerification("bad-token")).thenReturn(false);
+    void verifyEmailTokenRequiresEmail() throws Exception {
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "123456"))
+                .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get("/auth/verify-email-token/{token}", "bad-token"))
+        verify(authenticationService, never()).validateEmailVerification(any(), any());
+    }
+
+    @Test
+    void verifyEmailTokenRejectsInvalidToken() throws Exception {
+        when(authenticationService.validateEmailVerification("nobody@example.com", "bad-token")).thenReturn(false);
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "bad-token").param("email", "nobody@example.com"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Verification Failed"));
+    }
+
+    @Test
+    void verifyEmailTokenReturnsTheCodeErrorMessage() throws Exception {
+        when(authenticationService.validateEmailVerification("flipper@example.com", "000000"))
+                .thenThrow(new Exception("Invalid code."));
+
+        mockMvc.perform(get("/auth/verify-email-token/{token}", "000000").param("email", "flipper@example.com"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Invalid code."));
     }
 
     @Test
@@ -518,7 +545,11 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token-123"))
                 .andExpect(jsonPath("$.isNewUser").value(true))
-                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456")));
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("Refresh-Token-Cookie=refresh-token-456"),
+                        org.hamcrest.Matchers.containsString("Secure"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict"))));
     }
 
     @Test

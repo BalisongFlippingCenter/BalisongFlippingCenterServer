@@ -16,6 +16,7 @@
 	<description>Server to handle webpage for balisong flipping</description>
 	<properties>
 		<java.version>22</java.version>
+		<testcontainers.version>1.21.4</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>
