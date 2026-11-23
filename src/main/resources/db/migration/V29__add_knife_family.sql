@@ -1,0 +1,2 @@
+ALTER TABLE knives
+    ADD COLUMN family VARCHAR(100);

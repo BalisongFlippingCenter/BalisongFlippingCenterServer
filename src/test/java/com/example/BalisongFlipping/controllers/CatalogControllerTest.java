@@ -41,7 +41,7 @@ class CatalogControllerTest {
     private RefreshTokenService refreshTokenService;
 
     private KnifeSummaryDto knifeSummary() {
-        return new KnifeSummaryDto("mako", "Mako", "Squid Industries", "squid-industries",
+        return new KnifeSummaryDto("mako", "Mako", "Squid Industries", "squid-industries", "Mako",
                 "Reverse Tanto", "G10", "$150-$200", null, true);
     }
 
@@ -52,7 +52,8 @@ class CatalogControllerTest {
 
         mockMvc.perform(get("/catalog/any/knives").param("search", "mako"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].slug").value("mako"));
+                .andExpect(jsonPath("$[0].slug").value("mako"))
+                .andExpect(jsonPath("$[0].family").value("Mako"));
     }
 
     @Test
@@ -67,13 +68,14 @@ class CatalogControllerTest {
 
     @Test
     void getKnifeReturnsDetail() throws Exception {
-        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries",
+        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries", "Mako",
                 "Reverse Tanto", "$150-$200", null, "A great trainer.", List.of());
         when(knifeCatalogService.getKnifeBySlug("mako")).thenReturn(detail);
 
         mockMvc.perform(get("/catalog/any/knives/{slug}", "mako"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Mako"));
+                .andExpect(jsonPath("$.name").value("Mako"))
+                .andExpect(jsonPath("$.family").value("Mako"));
     }
 
     @Test

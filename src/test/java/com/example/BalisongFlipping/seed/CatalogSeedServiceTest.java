@@ -75,7 +75,7 @@ class CatalogSeedServiceTest {
     }
 
     private KnifeSeedDto knifeSeed(String slug, String makerSlug, List<VersionSeedDto> versions) {
-        return new KnifeSeedDto(slug, "Mako", "Squid Industries", makerSlug, "Reverse Tanto",
+        return new KnifeSeedDto(slug, "Mako", "Squid Industries", makerSlug, "Mako", "Reverse Tanto",
                 "$150-$200", null, "A great trainer.", versions);
     }
 
@@ -190,6 +190,24 @@ class CatalogSeedServiceTest {
         assertEquals("mako", knife.getSlug());
         assertEquals(1, knife.getVersions().size());
         assertEquals(com.example.BalisongFlipping.enums.knives.PivotSystem.BUSHINGS, knife.getVersions().get(0).getPivotSystem());
+        assertEquals("Mako", knife.getFamily());
+    }
+
+    @Test
+    void createKnifeTrimsFamilyAndStoresBlankAsNull() {
+        when(knifeRepository.findBySlug(any())).thenReturn(Optional.empty());
+        when(makerRepository.findBySlug("squid-industries")).thenReturn(Optional.of(new Maker()));
+        when(knifeRepository.saveAndFlush(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+        when(knifeRepository.save(any(Knife.class))).thenAnswer(i -> i.getArgument(0));
+        List<VersionSeedDto> versions = List.of(validVersion(List.of(trainerVariant("standard"))));
+
+        Knife padded = catalogSeedService.createKnife(new KnifeSeedDto("squiddy-b", "Squiddy-B", "Squid Industries",
+                "squid-industries", "  Squiddy ", "Trainer", null, null, null, versions));
+        Knife blank = catalogSeedService.createKnife(new KnifeSeedDto("hydro", "Hydro", "Squid Industries",
+                "squid-industries", "   ", "Trainer", null, null, null, versions));
+
+        assertEquals("Squiddy", padded.getFamily());
+        assertNull(blank.getFamily());
     }
 
     @Test

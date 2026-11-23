@@ -119,7 +119,7 @@ public class CatalogSeedService {
         // slug is immutable after creation (used in URLs) -- always apply
         // updates against the path's slug, ignoring whatever the body sent.
         KnifeSeedDto corrected = new KnifeSeedDto(
-                slug, dto.name(), dto.maker(), dto.makerSlug(), dto.bladeStyle(), dto.priceRange(),
+                slug, dto.name(), dto.maker(), dto.makerSlug(), dto.family(), dto.bladeStyle(), dto.priceRange(),
                 dto.coverPhotoUrl(), dto.description(), dto.versions()
         );
         return seedKnife(corrected, maker);
@@ -185,6 +185,7 @@ public class CatalogSeedService {
         knife.setSlug(dto.slug());
         knife.setName(dto.name());
         knife.setMaker(maker);
+        knife.setFamily(dto.family() == null || dto.family().isBlank() ? null : dto.family().trim());
         knife.setCoverPhotoUrl(dto.coverPhotoUrl());
         knife.setDescription(dto.description());
         // Wholesale replace, keyed by knife slug + version_slug uniqueness -- same

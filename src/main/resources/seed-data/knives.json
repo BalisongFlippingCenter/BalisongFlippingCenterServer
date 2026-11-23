@@ -4,6 +4,7 @@
     "name": "Mako",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Mako",
     "bladeStyle": "Trainer",
     "priceRange": "$119.99–$149.99",
     "versions": [
@@ -109,6 +110,7 @@
     "name": "Squiddy",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$49.99–$79.99",
     "versions": [
@@ -143,6 +145,7 @@
     "name": "Krake Raken",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Krake Raken",
     "bladeStyle": "Tanto / Bowie / Weehawk",
     "priceRange": "$219.99 (trainer) / $265 (live blade)",
     "versions": [
@@ -181,6 +184,7 @@
     "name": "Titanium Krake Raken",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Krake Raken",
     "bladeStyle": "Tanto / Bowie / Weehawk",
     "priceRange": "$365 (trainer) / $410–$440 (live blade)",
     "versions": [
@@ -325,6 +329,7 @@
     "name": "Mako Harpoon",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Mako",
     "bladeStyle": "Harpoon",
     "priceRange": "$175–$195",
     "versions": [
@@ -392,6 +397,7 @@
     "name": "Squiddy-B",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$54.99",
     "versions": [
@@ -426,6 +432,7 @@
     "name": "Squiddy-U",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$59.99",
     "versions": [
@@ -460,6 +467,7 @@
     "name": "Squiddy-WH",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$79.99",
     "versions": [
@@ -494,6 +502,7 @@
     "name": "Squiddy-AL",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$89.99–$104.99",
     "versions": [
@@ -528,6 +537,7 @@
     "name": "Squiddy-ALT",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$89.99–$104.99",
     "versions": [
@@ -562,6 +572,7 @@
     "name": "Squiddy-XL",
     "maker": "Squid Industries",
     "makerSlug": "squid-industries",
+    "family": "Squiddy",
     "bladeStyle": "Trainer",
     "priceRange": "$179.99",
     "versions": [
