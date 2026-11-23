@@ -11,5 +11,18 @@
     "youtubeUrl": "https://www.youtube.com/c/squidindustriesco",
     "facebookUrl": "https://www.facebook.com/squidindustriesco/",
     "twitterUrl": "https://twitter.com/squidindustries"
+  },
+  {
+    "slug": "brs",
+    "name": "BladeRunnerS Systems (BRS)",
+    "country": "United States",
+    "knownFor": "Balisongs built around balance, precision, and quality, led by the flagship Alpha Beast, the neutral-handling Replicant, and the more affordable Barebones.",
+    "officialSiteUrl": "https://www.bladerunnerssystems.com",
+    "logoUrl": null,
+    "foundedYear": 2010,
+    "instagramUrl": null,
+    "youtubeUrl": null,
+    "facebookUrl": null,
+    "twitterUrl": null
   }
 ]

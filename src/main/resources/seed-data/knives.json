@@ -590,5 +590,184 @@
         ]
       }
     ]
+  },
+  {
+    "slug": "brs-alpha-beast",
+    "name": "Alpha Beast",
+    "maker": "BladeRunnerS Systems (BRS)",
+    "makerSlug": "brs",
+    "bladeStyle": "Clip Point / Alt / Kukri / Bowie",
+    "priceRange": "$409.99–$544.99",
+    "versions": [
+      {
+        "versionSlug": "v3",
+        "version": "3.0",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Alpha Beast is BRS's flagship and the first knife the company made, combining the elements its founders, Lawrence Ho and Edward Anthonis, considered most important for flipping. Version 3.0 upgraded the bushing pivots, enlarged the pivot screws, and added stainless sexbolts on the spacers. Clip point and Alt blades come in 154CM or S35VN at the same price (S35VN blades are marked on the blade), with latchless Kukri and bead-blasted editions also offered. It sells in drops that sell out quickly.",
+        "overallLength": "9.875",
+        "weight": "5.06",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Tang Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "clip-point", "type": "live", "label": "Clip Point", "msrp": "409.99", "bladeStyle": "Clip Point", "bladeMaterial": "154CM" },
+          { "variantSlug": "alt", "type": "live", "label": "Alt", "msrp": "409.99", "bladeStyle": "Other", "bladeMaterial": "154CM" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "Sold directly in drops; frequently sold out. BRS does not ship knives internationally from its own site." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "channel",
+        "version": "Channel",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Channel Alpha Beast keeps the Alpha Beast's geometry but swaps the sandwich build for one-piece titanium channel handles, which makes it slightly heavier at 5.20 oz. It comes with a 154CM clip point, Alt, or latchless Bowie blade, with green-anodized and acid-washed editions, and sells in drops.",
+        "overallLength": "9.875",
+        "weight": "5.20",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Tang Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "clip-point", "type": "live", "label": "Clip Point", "msrp": "544.99", "bladeStyle": "Clip Point", "bladeMaterial": "154CM" },
+          { "variantSlug": "alt", "type": "live", "label": "Alt", "msrp": "544.99", "bladeStyle": "Other", "bladeMaterial": "154CM" },
+          { "variantSlug": "bowie", "type": "live", "label": "Bowie", "msrp": "544.99", "bladeStyle": "Bowie", "bladeMaterial": "154CM" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "Sold directly in drops; frequently sold out." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "brs-replicant",
+    "name": "Replicant",
+    "maker": "BladeRunnerS Systems (BRS)",
+    "makerSlug": "brs",
+    "bladeStyle": "Tanto / Alt",
+    "priceRange": "$369.99 (trainer) / $379.99 (live blade)",
+    "versions": [
+      {
+        "versionSlug": "standard",
+        "version": "Standard",
+        "discontinued": false,
+        "releaseYear": 2014,
+        "description": "The Replicant was built for flippers who wanted different ergonomics from the Alpha Beast, and BRS bills it as neutral handling that suits many flipping styles. It pairs a titanium frame with G-10 scales and a 154CM tanto blade, with an Alt blade also sold. It was #4 on Loadout Room's top 25 best-selling blades of 2017. Carbon Fiber, Premium, and Killer Bee editions use different handle materials.",
+        "overallLength": "10.00",
+        "weight": "4.80",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "G-10 / Titanium",
+        "handleFinish": "Plain",
+        "variants": [
+          { "variantSlug": "tanto", "type": "live", "label": "Tanto", "msrp": "379.99", "bladeStyle": "Tanto", "bladeMaterial": "154CM" },
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer (Block Spacers)", "msrp": "369.99", "bladeStyle": "Trainer" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "Sold directly in drops; frequently sold out." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "brs-barebones",
+    "name": "Barebones",
+    "maker": "BladeRunnerS Systems (BRS)",
+    "makerSlug": "brs",
+    "bladeStyle": "Bayonet / Upswept Tanto",
+    "priceRange": "$224.99–$359.99",
+    "versions": [
+      {
+        "versionSlug": "stainless",
+        "version": "Stainless",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Barebones is BRS's affordable model, designed to perform like the Alpha Beast and Replicant without the extras. Skeletonized all-stainless-steel handles, hardware, and latch make it the heaviest of the three, paired with a 154CM blade in BRS's bayonet grind.",
+        "overallLength": "9.875",
+        "weight": "5.7",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "Stainless Steel",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "bayonet", "type": "live", "label": "Bayonet", "msrp": "224.99", "bladeStyle": "Other", "bladeMaterial": "154CM" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "Sold directly; frequently sold out." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "aluminum-channel",
+        "version": "Aluminum Channel",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Aluminum Channel Barebones swaps the stainless handles for 7075 aluminum channel handles with bushings and zen pins (no tang pin), making it the lightest knife in the BRS lineup at 4.06 oz. It comes as a 154CM bayonet live blade or a trainer. Blemished units with cosmetic finish spots are sold at a discount, as-is and without warranty.",
+        "overallLength": "9.875",
+        "weight": "4.06",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Channel",
+        "handleMaterial": "7075 Aluminum",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "bayonet", "type": "live", "label": "Bayonet", "msrp": "269.99", "bladeStyle": "Other", "bladeMaterial": "154CM" },
+          { "variantSlug": "trainer", "type": "trainer", "label": "Trainer", "msrp": "259.99", "bladeStyle": "Trainer" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "In stock directly from the maker, including discounted blemished units sold as-is." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      },
+      {
+        "versionSlug": "titanium",
+        "version": "Tibones",
+        "discontinued": false,
+        "releaseYear": null,
+        "description": "The Tibones is BRS's titanium take on the Barebones: titanium sandwich handles on a bushing system with the v2 Barebones blade, a 154CM upswept tanto with a crowned spine. At 4.3 oz it is a nimble flipper, offered in stonewash, green-anodized, and splatter-anodized finishes.",
+        "overallLength": "9.875",
+        "weight": "4.3",
+        "pivotSystem": "Bushing",
+        "latchType": "Swing Latch",
+        "pinSystem": "Zen Pin",
+        "hasModularBalance": false,
+        "balanceValue": null,
+        "handleConstruction": "Sandwich",
+        "handleMaterial": "Titanium",
+        "handleFinish": "Stonewash",
+        "variants": [
+          { "variantSlug": "upswept-tanto", "type": "live", "label": "Upswept Tanto", "msrp": "359.99", "bladeStyle": "Tanto", "bladeMaterial": "154CM" }
+        ],
+        "whereToFind": [
+          { "label": "BladeRunnerS Systems", "url": "https://www.bladerunnerssystems.com", "type": "official", "note": "Sold directly; frequently sold out." },
+          { "label": "Secondary Market / BST", "url": null, "type": "secondary", "note": "Also available used. Check BST communities, eBay, and Reddit r/balisong." }
+        ]
+      }
+    ]
   }
 ]
