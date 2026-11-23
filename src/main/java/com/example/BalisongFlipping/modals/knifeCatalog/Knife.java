@@ -25,6 +25,9 @@ public class Knife {
     @JoinColumn(name = "maker_id", nullable = false)
     private Maker maker;
 
+    @Column(length = 100)
+    private String family;
+
     @Column(columnDefinition = "TEXT")
     private String coverPhotoUrl;
 
@@ -45,6 +48,9 @@ public class Knife {
 
     public Maker getMaker() { return maker; }
     public void setMaker(Maker maker) { this.maker = maker; }
+
+    public String getFamily() { return family; }
+    public void setFamily(String family) { this.family = family; }
 
     public String getCoverPhotoUrl() { return coverPhotoUrl; }
     public void setCoverPhotoUrl(String coverPhotoUrl) { this.coverPhotoUrl = coverPhotoUrl; }

@@ -18,7 +18,7 @@ Java Spring Boot REST API backend for **Balisong Flipping Hub**, a full-stack co
 | Framework | Spring Boot 3.2.5 |
 | ORM | Spring Data JPA + Hibernate 6 |
 | Database | PostgreSQL 16 (containerized via Docker) |
-| Schema migrations | Flyway (V1–V28) |
+| Schema migrations | Flyway (V1–V29) |
 | Auth | JWT (`jjwt` 0.11.5) + refresh tokens (7-day expiry) |
 | File storage | AWS S3 (SDK v2 — `S3Client` + `S3Presigner`, fully wired) |
 | Email | Spring Mail (JavaMailSender over Gmail SMTP; the instance role also allows SES, which is unused) |
@@ -173,7 +173,7 @@ Ban/suspend are enforced two ways: at login (`AuthServiceImplementation.authenti
 | POST/PUT/DELETE | `/admin/catalog/makers[/{slug}]` | Maker CRUD |
 | POST/PUT/DELETE | `/admin/catalog/knives[/{slug}]` | Knife CRUD — body is a full `KnifeSeedDto` (knife → versions → variants), same shape `/import` takes for one knife |
 
-**Shape**: `Knife` → `KnifeVersion` (one per real hardware/material revision, e.g. V3 vs a titanium remake — cosmetic-only colorway SKUs are *not* separate versions) → `KnifeVariant` (one per blade type offered under that version: `TRAINER` or a `LIVE_BLADE` style like Tanto/Bowie/Weehawk). Trainer variants also carry `trainerBlade` (migration V27): `STANDARD` (plain dull trainer blade, the default when the seed/import JSON omits it) or `FALSE_EDGE` (a trainer blade made to look like a live edge) — set as `"trainerBlade": "false_edge"` in seed/import JSON; rejected on `LIVE_BLADE` variants.
+**Shape**: `Knife` → `KnifeVersion` (one per real hardware/material revision, e.g. V3 vs a titanium remake — cosmetic-only colorway SKUs are *not* separate versions) → `KnifeVariant` (one per blade type offered under that version: `TRAINER` or a `LIVE_BLADE` style like Tanto/Bowie/Weehawk). Trainer variants also carry `trainerBlade` (migration V27): `STANDARD` (plain dull trainer blade, the default when the seed/import JSON omits it) or `FALSE_EDGE` (a trainer blade made to look like a live edge) — set as `"trainerBlade": "false_edge"` in seed/import JSON; rejected on `LIVE_BLADE` variants. Knives can also carry an optional free-text `family` (migration V29, e.g. "Squiddy" for the Squiddy/-B/-U/-WH/-AL/-ALT/-XL) that groups separate catalog knives on the admin catalog page; set it as `"family"` in seed/import JSON or on the knife form, blank is stored as null, and both the summary and detail DTOs return it.
 
 **Required fields** (`CatalogSeedService.validateRequiredFields`, shared by create/update/import — 400 `CatalogValidationException` listing exactly what's missing): every version needs `overallLength`, `weight`, `pivotSystem`, `latchType`, `pinSystem`, `handleConstruction`, `handleMaterial`, `handleFinish`; every variant needs `msrp`; `LIVE_BLADE` variants additionally need `bladeStyle` and `bladeMaterial` (optional-but-settable for `TRAINER`, since a trainer's steel is generic and not a meaningful spec). `bladeFinish` is not tracked anywhere on the catalog side — cosmetic-only, deliberately dropped (migration V24); this is an info page, not a store, so finish doesn't carry the way material/style do. Plastic handle/blade materials get specific values (`CPVC`, `ACETAL`, `ULTEM`, `HDPE`) alongside the generic `PLASTIC`, mirroring how aluminum has `ALUMINIUM_6061`/`ALUMINIUM_7075` alongside generic `ALUMINIUM` — added after the Squiddy line (4 different plastics across 6 catalog entries) exposed the generic bucket as too coarse.
 

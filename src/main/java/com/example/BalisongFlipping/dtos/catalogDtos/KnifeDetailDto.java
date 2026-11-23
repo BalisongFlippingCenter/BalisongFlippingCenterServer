@@ -7,6 +7,7 @@ public record KnifeDetailDto(
         String name,
         String makerName,
         String makerSlug,
+        String family,
         String bladeStyleSummary,
         String priceRangeSummary,
         String coverPhotoUrl,
