@@ -68,7 +68,7 @@ class AdminCatalogControllerTest {
     }
 
     private KnifeSeedDto knifeSeed() {
-        return new KnifeSeedDto("mako", "Mako", "Squid Industries", "squid-industries",
+        return new KnifeSeedDto("mako", "Mako", "Squid Industries", "squid-industries", "Mako",
                 "Reverse Tanto", "$150-$200", null, "A great trainer.", List.of());
     }
 
@@ -179,7 +179,7 @@ class AdminCatalogControllerTest {
 
     @Test
     void createKnifeSucceeds() throws Exception {
-        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries",
+        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries", "Mako",
                 "Reverse Tanto", "$150-$200", null, "A great trainer.", List.of());
         when(knifeCatalogService.getKnifeBySlug("mako")).thenReturn(detail);
 
@@ -204,7 +204,7 @@ class AdminCatalogControllerTest {
 
     @Test
     void updateKnifeSucceeds() throws Exception {
-        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries",
+        KnifeDetailDto detail = new KnifeDetailDto("mako", "Mako", "Squid Industries", "squid-industries", "Mako",
                 "Reverse Tanto", "$150-$200", null, "Updated description.", List.of());
         when(knifeCatalogService.getKnifeBySlug("mako")).thenReturn(detail);
 

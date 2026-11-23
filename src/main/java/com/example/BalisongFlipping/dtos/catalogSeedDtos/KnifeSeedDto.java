@@ -7,6 +7,7 @@ public record KnifeSeedDto(
         String name,
         String maker,
         String makerSlug,
+        String family,
         String bladeStyle,
         String priceRange,
         String coverPhotoUrl,
